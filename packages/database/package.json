@@ -1,0 +1,49 @@
+{
+  "name": "@study-karnataka/database",
+  "version": "1.0.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc --build",
+    "type-check": "tsc --noEmit",
+    "lint": "echo \"Linting database...\"",
+    "test": "vitest run",
+    "db:generate": "dotenv -e ../../.env -- prisma generate",
+    "db:push": "dotenv -e ../../.env -- prisma db push",
+    "db:migrate": "dotenv -e ../../.env -- prisma migrate dev",
+    "db:migrate:dev": "dotenv -e ../../.env -- prisma migrate dev",
+    "db:migrate:deploy": "dotenv -e ../../.env -- prisma migrate deploy",
+    "db:seed": "dotenv -e ../../.env -- tsx prisma/seed.ts",
+    "db:seed:mcq-demo": "dotenv -e ../../.env -- tsx prisma/mcq-demo-seed.ts",
+    "db:seed:demo": "dotenv -e ../../.env -- tsx prisma/demo-seed.ts",
+    "db:demo:cleanup": "dotenv -e ../../.env -- tsx prisma/demo-cleanup.ts",
+    "db:seed:syllabus-demo": "dotenv -e ../../.env -- tsx prisma/visual-demo-seed.ts",
+    "db:cleanup:syllabus-demo": "dotenv -e ../../.env -- tsx prisma/visual-demo-cleanup.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.3.1",
+    "@study-karnataka/shared-types": "workspace:*",
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.4.7"
+  },
+  "devDependencies": {
+    "@study-karnataka/config": "workspace:*",
+    "@types/bcryptjs": "^2.4.6",
+    "prisma": "^6.3.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.5"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  }
+}

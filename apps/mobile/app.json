@@ -1,0 +1,29 @@
+{
+  "expo": {
+    "name": "Study Karnataka",
+    "slug": "study-karnataka",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1e3a8a"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.studykarnataka.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#1e3a8a"
+      },
+      "package": "com.studykarnataka.app"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
+  }
+}

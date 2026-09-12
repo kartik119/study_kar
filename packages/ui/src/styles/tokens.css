@@ -1,0 +1,32 @@
+:root {
+  --sk-primary-red: #EF2323;
+  --sk-dark-red: #D91E24;
+  --sk-warm-orange: #F59E0B;
+  --sk-dark-heading: #111827;
+  --sk-body-text: #334155;
+  --sk-secondary-text: #64748B;
+  --sk-page-bg: #F7F8FC;
+  --sk-card-bg: #FFFFFF;
+  --sk-border: #E6EAF0;
+
+  --sk-soft-red: #FDECEC;
+  --sk-soft-orange: #FFF5E6;
+  --sk-soft-green: #ECFDF5;
+  --sk-soft-violet: #F5EEFF;
+  --sk-soft-yellow: #FFF9E8;
+  --sk-soft-blue: #EFF6FF;
+
+  --sk-success: #10B981;
+  --sk-warning: #F59E0B;
+  --sk-error: #EF2323;
+  --sk-info: #3B82F6;
+  --sk-disabled: #94A3B8;
+
+  --sk-radius-control: 10px;
+  --sk-radius-card: 16px;
+  --sk-radius-panel: 20px;
+  --sk-radius-pill: 9999px;
+
+  --sk-shadow-card: 0 4px 12px 0 rgba(0, 0, 0, 0.03), 0 1px 2px 0 rgba(0, 0, 0, 0.02);
+  --sk-font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}

@@ -1,0 +1,601 @@
+/**
+ * Study Karnataka — Exam Syllabus Page Stylesheet
+ * Uses official Study Karnataka Blue design tokens
+ * Implements 70%/30% Waterfall Tree + Inline Node Details Inspector Panel
+ */
+
+.syllabus-page {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 16px 24px 60px;
+  background-color: #F7F9FC;
+  font-family: 'Inter', system-ui, -apple-system, 'Noto Sans Kannada', sans-serif;
+  color: #334155;
+  box-sizing: border-box;
+}
+
+@media (max-width: 1024px) {
+  .syllabus-page {
+    padding: 14px 16px 50px;
+  }
+}
+
+@media (max-width: 640px) {
+  .syllabus-page {
+    padding: 10px 10px 40px;
+  }
+}
+
+.syllabus-page-header {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #DCE6EE;
+  margin-bottom: 14px;
+}
+
+@media (min-width: 768px) {
+  .syllabus-page-header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.syllabus-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #111827;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.syllabus-subtitle {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #64748B;
+  margin-top: 2px;
+}
+
+.syllabus-context-card {
+  background-color: #FFFFFF;
+  border: 1px solid #DCE6EE;
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+}
+
+.syllabus-context-flex {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.syllabus-meta-grid {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.syllabus-meta-pill {
+  background-color: #F7F9FC;
+  border: 1px solid #DCE6EE;
+  border-radius: 6px;
+  padding: 4px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.syllabus-meta-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #64748B;
+  letter-spacing: 0.05em;
+}
+
+.syllabus-meta-value {
+  font-size: 12px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.revision-header-card {
+  background-color: #FFFFFF;
+  border: 1px solid #DCE6EE;
+  border-radius: 12px;
+  padding: 10px 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+@media (min-width: 768px) {
+  .revision-header-card {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.revision-metrics-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  border-left: 1px solid #DCE6EE;
+  padding-left: 12px;
+}
+
+.metric-pill-neutral {
+  padding: 2px 8px;
+  background-color: #F1F5F9;
+  color: #334155;
+  border-radius: 9999px;
+  border: 1px solid #CBD5E1;
+  font-size: 11.5px;
+  font-weight: 500;
+}
+
+.metric-pill-blue {
+  padding: 2px 8px;
+  background-color: #EAF3F9;
+  color: #084B7A;
+  border-radius: 9999px;
+  border: 1px solid rgba(8, 75, 122, 0.2);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.metric-pill-green {
+  padding: 2px 8px;
+  background-color: #ECFDF5;
+  color: #047857;
+  border-radius: 9999px;
+  border: 1px solid #A7F3D0;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.metric-pill-amber {
+  padding: 2px 8px;
+  background-color: #FFFBEB;
+  color: #B45309;
+  border-radius: 9999px;
+  border: 1px solid #FDE68A;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+/* Full Width Syllabus Structure Workspace */
+.syllabus-waterfall-split-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+/* Left Panel: Syllabus Structure Waterfall Card (70% Split) */
+.waterfall-tree-panel {
+  background-color: #FFFFFF;
+  border: 1px solid #DCE6EE;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 6px 0 rgba(0, 0, 0, 0.03);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.waterfall-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+.waterfall-panel-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #111827;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.waterfall-tree-action-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #F1F5F9;
+}
+
+.waterfall-tree-search-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.waterfall-tree-container {
+  padding-right: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+/* Compact Waterfall Tree Row Styling */
+.waterfall-tree-node-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 7px;
+  border-radius: 6px;
+  background-color: #FAFAFA;
+  border: 1px solid #E2E8F0;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.waterfall-tree-node-row[draggable="true"] {
+  cursor: grab;
+}
+
+.waterfall-tree-node-row.is-dragging {
+  opacity: 0.4;
+  border: 1.5px dashed #084B7A !important;
+}
+
+.waterfall-tree-node-row.drop-target-above {
+  border-top: 3px solid #084B7A !important;
+}
+
+.waterfall-tree-node-row.drop-target-below {
+  border-bottom: 3px solid #084B7A !important;
+}
+
+.waterfall-tree-node-row.drop-target-inside {
+  background-color: #EAF3F9 !important;
+  border: 1.5px solid #084B7A !important;
+}
+
+.node-drag-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #94A3B8;
+  cursor: grab;
+  padding: 0 3px;
+  user-select: none;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  transition: color 0.15s ease;
+}
+
+.node-drag-handle:hover {
+  color: #084B7A;
+}
+
+.waterfall-tree-node-row:hover {
+  background-color: #F4F8FB;
+  border-color: #084B7A;
+}
+
+.waterfall-tree-node-row.selected {
+  background-color: #EAF3F9;
+  border-color: #084B7A;
+  border-left-width: 4px;
+  box-shadow: 0 1px 3px rgba(8, 75, 122, 0.12);
+}
+
+.waterfall-tree-node-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.waterfall-node-chevron {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  background-color: #F1F5F9;
+  border: 1px solid #CBD5E1;
+  color: #475569;
+  font-size: 10px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color 0.15s ease;
+}
+
+.waterfall-node-chevron:hover {
+  background-color: #E2E8F0;
+}
+
+.waterfall-node-number {
+  font-size: 12px;
+  font-weight: 700;
+  color: #084B7A;
+  font-family: monospace;
+  flex-shrink: 0;
+}
+
+.waterfall-node-title-en {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #111827;
+  line-height: 1.3;
+}
+
+.waterfall-node-title-kn {
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748B;
+  line-height: 1.3;
+  font-family: 'Noto Sans Kannada', sans-serif;
+}
+
+.waterfall-node-link-pill {
+  font-size: 10.5px;
+  color: #084B7A;
+  background-color: #EAF3F9;
+  padding: 1px 6px;
+  border-radius: 4px;
+  text-decoration: none;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 6px;
+}
+
+.waterfall-node-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.waterfall-child-count-badge {
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  background-color: #F1F5F9;
+  color: #084B7A;
+  border-radius: 9999px;
+  border: 1px solid #CBD5E1;
+}
+
+/* 3 Dots Context Menu Container & Dropdown */
+.node-action-menu-container {
+  position: relative;
+}
+
+.waterfall-node-menu-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: 1px solid #DCE6EE;
+  background-color: #FFFFFF;
+  color: #64748B;
+  font-size: 14px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.waterfall-node-menu-btn:hover {
+  background-color: #F1F5F9;
+  color: #084B7A;
+  border-color: #084B7A;
+}
+
+.tree-action-dropdown {
+  position: absolute;
+  right: 0;
+  width: 170px;
+  background-color: #FFFFFF;
+  border: 1px solid #DCE6EE;
+  border-radius: 8px;
+  z-index: 50;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dropdown-down {
+  top: 30px;
+  box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.15);
+}
+
+.dropdown-up {
+  bottom: 100%;
+  margin-bottom: 6px;
+  box-shadow: 0 -5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.tree-action-dropdown-item {
+  width: 100%;
+  text-align: left;
+  padding: 7px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #334155;
+  background: transparent;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: background-color 0.1s ease;
+}
+
+.tree-action-dropdown-item:hover {
+  background-color: #F8FAFC;
+  color: #084B7A;
+}
+
+.tree-action-dropdown-item.danger {
+  color: #DC2626;
+}
+
+.tree-action-dropdown-item.danger:hover {
+  background-color: #FEF2F2;
+}
+
+/* Legend & Stats Footer under Waterfall Tree */
+.waterfall-legend-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 6px 10px;
+  background-color: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  font-size: 11px;
+}
+
+.legend-dot-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 500;
+  color: #475569;
+}
+
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.waterfall-tree-footer-stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding-top: 6px;
+  border-top: 1px solid #F1F5F9;
+  font-size: 12px;
+  color: #64748B;
+}
+
+/* Right Panel: Inline Node Details Form Inspector Panel (30% Split) */
+.node-details-inspector-panel {
+  background-color: #FFFFFF;
+  border: 1px solid #DCE6EE;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 6px 0 rgba(0, 0, 0, 0.03);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.inspector-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+.inspector-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.inspector-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+}
+
+.inspector-form-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Inspector Bottom Action Footer */
+.inspector-footer-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 12px;
+  border-top: 1px solid #E2E8F0;
+}
+
+/* Inline Node Editor Card inside Waterfall Tree */
+.inline-node-editor-card {
+  margin: 6px 0 10px 0;
+  padding: 12px 14px;
+  background-color: #FFFFFF;
+  border: 1.5px solid #084B7A;
+  border-radius: 10px;
+  box-shadow: 0 4px 14px 0 rgba(8, 75, 122, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.inline-editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+.inline-editor-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #084B7A;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.inline-editor-form-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.inline-editor-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #F1F5F9;
+}
+

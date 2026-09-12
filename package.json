@@ -1,0 +1,38 @@
+{
+  "name": "study-karnataka-monorepo",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Study Karnataka Competitive Exam Preparation Platform Monorepo",
+  "scripts": {
+    "dev": "pnpm --parallel --filter \"./apps/*\" dev",
+    "build": "pnpm --filter \"./packages/*\" build && pnpm --filter \"./apps/*\" build",
+    "lint": "pnpm --recursive lint",
+    "type-check": "pnpm --recursive type-check", 
+    "typecheck": "pnpm --recursive type-check",
+    "test": "pnpm --recursive test",
+    "format": "prettier --write \"**/*.{ts,tsx,js,json,md,css}\"",
+    "db:generate": "pnpm --filter @study-karnataka/database db:generate",
+    "db:push": "pnpm --filter @study-karnataka/database db:push",
+    "db:migrate": "pnpm --filter @study-karnataka/database db:migrate",
+    "db:migrate:dev": "pnpm --filter @study-karnataka/database db:migrate:dev",
+    "db:migrate:deploy": "pnpm --filter @study-karnataka/database db:migrate:deploy",
+    "db:seed": "pnpm --filter @study-karnataka/database db:seed",
+    "db:seed:mcq-demo": "pnpm --filter @study-karnataka/database db:seed:mcq-demo",
+    "db:seed:demo": "pnpm --filter @study-karnataka/database db:seed:demo",
+    "db:demo:cleanup": "pnpm --filter @study-karnataka/database db:demo:cleanup",
+    "db:seed:syllabus-demo": "pnpm --filter @study-karnataka/database db:seed:syllabus-demo",
+    "db:cleanup:syllabus-demo": "pnpm --filter @study-karnataka/database db:cleanup:syllabus-demo",
+    "database:migrate": "pnpm db:migrate:dev",
+    "database:seed": "pnpm db:seed"
+  },
+  "devDependencies": {
+    "dotenv-cli": "^11.0.0",
+    "playwright": "^1.62.1",
+    "prettier": "^3.5.0",
+    "typescript": "^5.7.3"
+  },
+  "packageManager": "pnpm@11.9.0",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

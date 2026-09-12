@@ -1,0 +1,30 @@
+{
+  "name": "@study-karnataka/validation",
+  "version": "1.0.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc --build",
+    "type-check": "tsc --noEmit",
+    "lint": "echo \"Linting validation...\"",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@study-karnataka/shared-types": "workspace:*",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@study-karnataka/config": "workspace:*",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.5"
+  }
+}

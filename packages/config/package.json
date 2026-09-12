@@ -1,0 +1,30 @@
+{
+  "name": "@study-karnataka/config",
+  "version": "1.0.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc --build",
+    "type-check": "tsc --noEmit",
+    "lint": "echo \"Linting config...\"",
+    "test": "echo \"No tests for config\""
+  },
+  "files": [
+    "dist",
+    "tsconfig.base.json",
+    "tsconfig.node.json",
+    "tsconfig.react.json"
+  ],
+  "devDependencies": {
+    "typescript": "^5.7.3"
+  }
+}

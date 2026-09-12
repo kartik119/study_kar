@@ -1,0 +1,31 @@
+{
+  "name": "@study-karnataka/mobile",
+  "version": "1.0.0",
+  "private": true,
+  "main": "node_modules/expo/AppEntry.js",
+  "scripts": {
+    "dev": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web",
+    "build": "echo \"Mobile build check...\"",
+    "type-check": "tsc --noEmit",
+    "lint": "echo \"Linting mobile app...\"",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@study-karnataka/shared-types": "workspace:*",
+    "@study-karnataka/validation": "workspace:*",
+    "expo": "~52.0.0",
+    "expo-status-bar": "~2.0.0",
+    "react": "18.3.1",
+    "react-native": "0.76.7"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.25.2",
+    "@study-karnataka/config": "workspace:*",
+    "@types/react": "~18.3.12",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.5"
+  }
+}

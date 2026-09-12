@@ -1,0 +1,2391 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum PreparationLanguage {
+  en
+  kn
+}
+
+enum AccountStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum AccountType {
+  STUDENT
+  ADMIN
+}
+
+enum OtpPurpose {
+  STUDENT_REGISTRATION
+  STUDENT_LOGIN
+  GUARDIAN_CONSENT
+}
+
+enum SessionPlatform {
+  WEB
+  ANDROID
+  IOS
+  ADMIN_WEB
+}
+
+enum ConsentStatus {
+  NOT_REQUIRED
+  PENDING
+  VERIFIED
+  REJECTED
+  REVOKED
+}
+
+model User {
+  id                  String              @id @default(uuid())
+  email               String?             @unique
+  mobile              String?             @unique
+  fullName            String
+  passwordHash        String?
+  accountType         AccountType         @default(STUDENT)
+  accountStatus       AccountStatus       @default(ACTIVE)
+  preparationLanguage PreparationLanguage @default(kn)
+  isLanguageLocked    Boolean             @default(false)
+  isActive            Boolean             @default(true)
+  emailVerifiedAt     DateTime?
+  mobileVerifiedAt    DateTime?
+  lastLoginAt         DateTime?
+  failedLoginCount    Int                 @default(0)
+  lockedUntil         DateTime?
+  passwordChangedAt   DateTime?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  userRoles             UserRole[]
+  studentProfile        StudentProfile?
+  sessions              UserSession[]
+  guardianConsents      GuardianConsent[]
+  rankedAttempts        RankedAttempt[]
+  rankedResults         RankedResult[]
+  practiceSessions      PracticeSession[]
+  mcqPracticeHistories  StudentMcqPracticeHistory[]
+  taxonomyPracticeStats StudentTaxonomyPracticeStats[]
+  performanceEvents     StudentPerformanceEvent[]
+  taxonomyPerformances  StudentTaxonomyPerformance[]
+
+  @@map("users")
+}
+
+model StudentProfile {
+  id                          String              @id @default(uuid())
+  userId                      String              @unique
+  dateOfBirth                 DateTime
+  preparationLanguage         PreparationLanguage @default(kn)
+  preparationLanguageLockedAt DateTime?
+  profileCompletedAt          DateTime?
+  createdAt                   DateTime            @default(now())
+  updatedAt                   DateTime            @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("student_profiles")
+}
+
+model OTPChallenge {
+  id                String     @id @default(uuid())
+  mobile            String
+  purpose           OtpPurpose
+  hashedCode        String
+  expiresAt         DateTime
+  maximumAttempts   Int        @default(3)
+  attemptsUsed      Int        @default(0)
+  resendAvailableAt DateTime
+  consumedAt        DateTime?
+  requestIp         String?
+  userAgent         String?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  @@index([mobile, purpose])
+  @@map("otp_challenges")
+}
+
+model UserSession {
+  id               String          @id @default(uuid())
+  userId           String?
+  adminUserId      String?
+  refreshTokenHash String
+  deviceId         String?
+  deviceName       String?
+  platform         SessionPlatform @default(WEB)
+  ipAddress        String?
+  userAgent        String?
+  expiresAt        DateTime
+  lastUsedAt       DateTime        @default(now())
+  revokedAt        DateTime?
+  revokeReason     String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  user      User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  adminUser AdminUser? @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([adminUserId])
+  @@map("user_sessions")
+}
+
+model GuardianConsent {
+  id                   String        @id @default(uuid())
+  studentUserId        String
+  guardianName         String
+  guardianRelationship String
+  guardianMobile       String
+  consentStatus        ConsentStatus @default(PENDING)
+  consentRequestedAt   DateTime      @default(now())
+  consentVerifiedAt    DateTime?
+  verificationMethod   String?
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+
+  studentUser User @relation(fields: [studentUserId], references: [id], onDelete: Cascade)
+
+  @@index([studentUserId])
+  @@map("guardian_consents")
+}
+
+model AdminUser {
+  id                String        @id @default(uuid())
+  email             String        @unique
+  fullName          String
+  passwordHash      String
+  accountStatus     AccountStatus @default(ACTIVE)
+  isActive          Boolean       @default(true)
+  failedLoginCount  Int           @default(0)
+  lockedUntil       DateTime?
+  lastLoginAt       DateTime?
+  passwordChangedAt DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  adminRoles AdminRole[]
+  auditLogs  AdminAuditLog[]
+  sessions   UserSession[]
+
+  syllabiReviewed  ExamSyllabus[] @relation("SyllabusReviewedBy")
+  syllabiApproved  ExamSyllabus[] @relation("SyllabusApprovedBy")
+  syllabiPublished ExamSyllabus[] @relation("SyllabusPublishedBy")
+  syllabiCreated   ExamSyllabus[] @relation("SyllabusCreatedBy")
+  syllabiUpdated   ExamSyllabus[] @relation("SyllabusUpdatedBy")
+
+  @@map("admin_users")
+}
+
+model Role {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  rolePermissions RolePermission[]
+  userRoles       UserRole[]
+  adminRoles      AdminRole[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  rolePermissions RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  assignedAt   DateTime @default(now())
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model UserRole {
+  userId     String
+  roleId     String
+  assignedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@map("user_roles")
+}
+
+model AdminRole {
+  adminUserId String
+  roleId      String
+  assignedAt  DateTime @default(now())
+
+  adminUser AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+  role      Role      @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([adminUserId, roleId])
+  @@map("admin_roles")
+}
+
+model AdminAuditLog {
+  id            String   @id @default(uuid())
+  adminUserId   String
+  action        String
+  module        String
+  recordType    String?
+  recordId      String?
+  previousValue Json?
+  newValue      Json?
+  reason        String?
+  ipAddress     String?
+  userAgent     String?
+  createdAt     DateTime @default(now())
+
+  adminUser AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+
+  @@map("admin_audit_logs")
+}
+
+enum ExamCycleStatus {
+  DRAFT
+  REVIEW_PENDING
+  CHANGES_REQUESTED
+  APPROVED
+  PUBLISHED
+  CLOSED
+  ARCHIVED
+}
+
+enum ExamVisibility {
+  PRIVATE
+  UNLISTED
+  PUBLIC
+}
+
+enum ImportantDateType {
+  NOTIFICATION
+  APPLICATION_START
+  APPLICATION_END
+  FEE_PAYMENT_END
+  CORRECTION_WINDOW
+  ADMIT_CARD
+  EXAM
+  RESULT
+  CUSTOM
+}
+
+enum OfficialResourceType {
+  OFFICIAL_NOTIFICATION
+  OFFICIAL_WEBSITE
+  APPLICATION
+  INSTRUCTIONS
+  CALENDAR
+  OTHER
+}
+
+model ExamAuthority {
+  id                 String   @id @default(uuid())
+  code               String   @unique
+  nameEn             String
+  nameKn             String
+  shortNameEn        String?
+  shortNameKn        String?
+  descriptionEn      String?
+  descriptionKn      String?
+  officialWebsiteUrl String?
+  logoUrl            String?
+  isActive           Boolean  @default(true)
+  createdByAdminId   String?
+  updatedByAdminId   String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  programmes ExamProgramme[]
+
+  @@map("exam_authorities")
+}
+
+model ExamProgramme {
+  id                        String   @id @default(uuid())
+  authorityId               String
+  code                      String   @unique
+  nameEn                    String
+  nameKn                    String
+  shortNameEn               String?
+  shortNameKn               String?
+  descriptionEn             String?
+  descriptionKn             String?
+  overviewEn                String?
+  overviewKn                String?
+  eligibilitySummaryEn      String?
+  eligibilitySummaryKn      String?
+  selectionProcessSummaryEn String?
+  selectionProcessSummaryKn String?
+  officialProgrammeUrl      String?
+  isActive                  Boolean  @default(true)
+  createdByAdminId          String?
+  updatedByAdminId          String?
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+
+  authority ExamAuthority @relation(fields: [authorityId], references: [id], onDelete: Cascade)
+  cycles    ExamCycle[]
+  testSeries TestSeries[]
+
+  @@map("exam_programmes")
+}
+
+model ExamCycle {
+  id                      String          @id @default(uuid())
+  programmeId             String
+  cycleCode               String
+  cycleYear               Int
+  titleEn                 String
+  titleKn                 String
+  descriptionEn           String?
+  descriptionKn           String?
+  notificationNumber      String?
+  notificationDate        DateTime?
+  applicationStartDate    DateTime?
+  applicationEndDate      DateTime?
+  feePaymentEndDate       DateTime?
+  tentativeExamDate       DateTime?
+  resultDate              DateTime?
+  officialNotificationUrl String?
+  applicationUrl          String?
+  logoUrl                 String?
+  status                  ExamCycleStatus @default(DRAFT)
+  visibility              ExamVisibility  @default(PRIVATE)
+  reviewSubmittedAt       DateTime?
+  reviewedAt              DateTime?
+  reviewedByAdminId       String?
+  publishedAt             DateTime?
+  publishedByAdminId      String?
+  closedAt                DateTime?
+  archivedAt              DateTime?
+  createdByAdminId        String?
+  updatedByAdminId        String?
+  version                 Int             @default(1)
+  createdAt               DateTime        @default(now())
+  updatedAt               DateTime        @updatedAt
+
+  programme         ExamProgramme          @relation(fields: [programmeId], references: [id], onDelete: Cascade)
+  eligibility       ExamEligibility?
+  importantDates    ExamImportantDate[]
+  officialResources ExamOfficialResource[]
+  seo               ExamSEO?
+  patterns          ExamPattern[]
+  syllabi           ExamSyllabus[]
+  mcqQuestions      McqQuestion[]
+
+  mockTests                 MockTest[]
+  currentAffairs            CurrentAffairExam[]
+
+  @@unique([programmeId, cycleCode])
+  @@index([status, visibility])
+  @@index([cycleYear])
+  @@index([programmeId, status])
+  @@index([updatedAt])
+  @@map("exam_cycles")
+}
+
+model ExamEligibility {
+  id                       String    @id @default(uuid())
+  examCycleId              String    @unique
+  minimumAge               Int?
+  maximumAge               Int?
+  ageCalculatedOn          DateTime?
+  minimumEducationEn       String?
+  minimumEducationKn       String?
+  nationalityRequirementEn String?
+  nationalityRequirementKn String?
+  domicileRequirementEn    String?
+  domicileRequirementKn    String?
+  attemptsSummaryEn        String?
+  attemptsSummaryKn        String?
+  additionalCriteriaEn     String?
+  additionalCriteriaKn     String?
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+
+  examCycle ExamCycle @relation(fields: [examCycleId], references: [id], onDelete: Cascade)
+
+  @@map("exam_eligibility")
+}
+
+model ExamImportantDate {
+  id           String            @id @default(uuid())
+  examCycleId  String
+  examStageId  String?
+  type         ImportantDateType @default(CUSTOM)
+  labelEn      String
+  labelKn      String
+  startAt      DateTime
+  endAt        DateTime?
+  isTentative  Boolean           @default(false)
+  displayOrder Int               @default(0)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  examCycle ExamCycle  @relation(fields: [examCycleId], references: [id], onDelete: Cascade)
+  examStage ExamStage? @relation(fields: [examStageId], references: [id], onDelete: SetNull)
+
+  @@index([examCycleId, startAt])
+  @@index([examStageId])
+  @@map("exam_important_dates")
+}
+
+model ExamOfficialResource {
+  id           String               @id @default(uuid())
+  examCycleId  String
+  resourceType OfficialResourceType @default(OTHER)
+  labelEn      String
+  labelKn      String
+  url          String
+  displayOrder Int                  @default(0)
+  isActive     Boolean              @default(true)
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+
+  examCycle ExamCycle      @relation(fields: [examCycleId], references: [id], onDelete: Cascade)
+  syllabi   ExamSyllabus[]
+
+  @@map("exam_official_resources")
+}
+
+model ExamSEO {
+  id                  String   @id @default(uuid())
+  examCycleId         String   @unique
+  slugEn              String   @unique
+  slugKn              String   @unique
+  metaTitleEn         String?
+  metaTitleKn         String?
+  metaDescriptionEn   String?
+  metaDescriptionKn   String?
+  socialTitleEn       String?
+  socialTitleKn       String?
+  socialDescriptionEn String?
+  socialDescriptionKn String?
+  canonicalUrlEn      String?
+  canonicalUrlKn      String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  examCycle ExamCycle @relation(fields: [examCycleId], references: [id], onDelete: Cascade)
+
+  @@map("exam_seo")
+}
+
+// -----------------------------------------------------------------------------
+// EXAM PATTERN & ACADEMIC STRUCTURE ENUMS & MODELS (PROMPT 4)
+// -----------------------------------------------------------------------------
+
+enum ExamPatternStatus {
+  DRAFT
+  REVIEW_PENDING
+  CHANGES_REQUESTED
+  APPROVED
+  PUBLISHED
+  ARCHIVED
+}
+
+enum ExamStageType {
+  PRELIMINARY
+  MAIN
+  INTERVIEW
+  PHYSICAL_TEST
+  SKILL_TEST
+  PRACTICAL_TEST
+  DOCUMENT_VERIFICATION
+  MEDICAL_TEST
+  OTHER
+}
+
+enum ExamAssessmentMode {
+  OBJECTIVE
+  DESCRIPTIVE
+  INTERVIEW
+  PRACTICAL
+  SKILL
+  PHYSICAL
+  DOCUMENT_VERIFICATION
+  MEDICAL
+  OTHER
+}
+
+enum ExamQuestionFormat {
+  MCQ_SINGLE_CORRECT
+  MCQ_MULTIPLE_CORRECT
+  TRUE_FALSE
+  MATCHING
+  SHORT_ANSWER
+  LONG_ANSWER
+  ESSAY
+  CASE_STUDY
+  INTERVIEW
+  PRACTICAL
+  SKILL
+  PHYSICAL
+  OTHER
+}
+
+enum ExamMediumRule {
+  BILINGUAL
+  KANNADA
+  ENGLISH
+  CANDIDATE_CHOICE
+  NOT_APPLICABLE
+  CUSTOM
+}
+
+enum NegativeMarkingType {
+  NONE
+  FIXED_MARKS
+  PERCENTAGE_OF_QUESTION_MARKS
+  FRACTION_OF_QUESTION_MARKS
+}
+
+enum QualifyingRuleType {
+  NONE
+  MARKS
+  PERCENTAGE
+  AGGREGATE_MARKS
+  AGGREGATE_PERCENTAGE
+  ALL_QUALIFYING_PAPERS
+  CUSTOM
+}
+
+model ExamPattern {
+  id                    String            @id @default(uuid())
+  examCycleId           String
+  revisionNumber        Int
+  sourcePatternId       String?
+  titleEn               String
+  titleKn               String
+  descriptionEn         String?           @db.Text
+  descriptionKn         String?           @db.Text
+  generalInstructionsEn String?           @db.Text
+  generalInstructionsKn String?           @db.Text
+  sourceResourceId      String?
+  sourceReference       String?
+  status                ExamPatternStatus @default(DRAFT)
+  isCurrent             Boolean           @default(false)
+  reviewSubmittedAt     DateTime?
+  reviewedAt            DateTime?
+  reviewedByAdminId     String?
+  approvedAt            DateTime?
+  approvedByAdminId     String?
+  publishedAt           DateTime?
+  publishedByAdminId    String?
+  archivedAt            DateTime?
+  createdByAdminId      String?
+  updatedByAdminId      String?
+  version               Int               @default(1)
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+
+  examCycle ExamCycle      @relation(fields: [examCycleId], references: [id], onDelete: Cascade)
+  stages    ExamStage[]
+  syllabi   ExamSyllabus[]
+
+  @@unique([examCycleId, revisionNumber])
+  @@index([examCycleId])
+  @@index([examCycleId, status, isCurrent])
+  @@index([updatedAt])
+  @@map("exam_patterns")
+}
+
+model ExamStage {
+  id                      String             @id @default(uuid())
+  examPatternId           String
+  code                    String
+  stageType               ExamStageType
+  nameEn                  String
+  nameKn                  String
+  shortNameEn             String?
+  shortNameKn             String?
+  descriptionEn           String?            @db.Text
+  descriptionKn           String?            @db.Text
+  instructionsEn          String?            @db.Text
+  instructionsKn          String?            @db.Text
+  displayOrder            Int
+  isQualifying            Boolean            @default(false)
+  contributesToFinalMerit Boolean            @default(true)
+  qualificationRuleType   QualifyingRuleType @default(NONE)
+  qualificationValue      Decimal?           @db.Decimal(10, 2)
+  qualificationRuleEn     String?            @db.Text
+  qualificationRuleKn     String?            @db.Text
+  isActive                Boolean            @default(true)
+  version                 Int                @default(1)
+  createdAt               DateTime           @default(now())
+  updatedAt               DateTime           @updatedAt
+
+  examPattern               ExamPattern                @relation(fields: [examPatternId], references: [id], onDelete: Cascade)
+  papers                    ExamPaper[]
+  importantDates            ExamImportantDate[]
+  syllabusNodes             ExamSyllabusNode[]
+  mockTests                 MockTest[]
+  testSeries                TestSeries[]
+  currentAffairs            CurrentAffairStage[]
+
+  @@unique([examPatternId, code])
+  @@unique([examPatternId, displayOrder])
+  @@index([examPatternId])
+  @@map("exam_stages")
+}
+
+model ExamPaper {
+  id                                 String              @id @default(uuid())
+  examStageId                        String
+  code                               String
+  assessmentMode                     ExamAssessmentMode
+  nameEn                             String
+  nameKn                             String
+  shortNameEn                        String?
+  shortNameKn                        String?
+  descriptionEn                      String?             @db.Text
+  descriptionKn                      String?             @db.Text
+  instructionsEn                     String?             @db.Text
+  instructionsKn                     String?             @db.Text
+  mediumRule                         ExamMediumRule      @default(BILINGUAL)
+  mediumInstructionsEn               String?             @db.Text
+  mediumInstructionsKn               String?             @db.Text
+  displayOrder                       Int
+  durationMinutes                    Int?
+  totalQuestions                     Int?
+  questionsToAnswer                  Int?
+  totalMarks                         Decimal?            @db.Decimal(10, 2)
+  isQualifying                       Boolean             @default(false)
+  contributesToStageMerit            Boolean             @default(true)
+  qualifyingRuleType                 QualifyingRuleType  @default(NONE)
+  qualifyingValue                    Decimal?            @db.Decimal(10, 2)
+  defaultNegativeMarkingType         NegativeMarkingType @default(NONE)
+  defaultNegativeMarkingValue        Decimal?            @db.Decimal(10, 2)
+  defaultNegativeFractionNumerator   Int?
+  defaultNegativeFractionDenominator Int?
+  calculatorEnabled                  Boolean             @default(false)
+  isActive                           Boolean             @default(true)
+  version                            Int                 @default(1)
+  createdAt                          DateTime            @default(now())
+  updatedAt                          DateTime            @updatedAt
+
+  examStage                 ExamStage                  @relation(fields: [examStageId], references: [id], onDelete: Cascade)
+  sections                  ExamPaperSection[]
+  syllabusNodes             ExamSyllabusNode[]
+  mockTests                 MockTest[]
+  testSeries                TestSeries[]
+
+  @@unique([examStageId, code])
+  @@unique([examStageId, displayOrder])
+  @@index([examStageId])
+  @@map("exam_papers")
+}
+
+model ExamPaperSection {
+  id                          String               @id @default(uuid())
+  examPaperId                 String
+  code                        String
+  questionFormat              ExamQuestionFormat
+  nameEn                      String
+  nameKn                      String
+  descriptionEn               String?              @db.Text
+  descriptionKn               String?              @db.Text
+  instructionsEn              String?              @db.Text
+  instructionsKn              String?              @db.Text
+  displayOrder                Int
+  totalQuestions              Int
+  questionsToAnswer           Int
+  marksPerQuestion            Decimal              @db.Decimal(10, 2)
+  calculatedTotalMarks        Decimal              @db.Decimal(10, 2)
+  durationMinutes             Int?
+  negativeMarkingType         NegativeMarkingType?
+  negativeMarkingValue        Decimal?             @db.Decimal(10, 2)
+  negativeFractionNumerator   Int?
+  negativeFractionDenominator Int?
+  isQualifying                Boolean              @default(false)
+  qualifyingRuleType          QualifyingRuleType   @default(NONE)
+  qualifyingValue             Decimal?             @db.Decimal(10, 2)
+  contributesToPaperMerit     Boolean              @default(true)
+  isActive                    Boolean              @default(true)
+  version                     Int                  @default(1)
+  createdAt                   DateTime             @default(now())
+  updatedAt                   DateTime             @updatedAt
+
+  examPaper ExamPaper @relation(fields: [examPaperId], references: [id], onDelete: Cascade)
+
+  @@unique([examPaperId, code])
+  @@unique([examPaperId, displayOrder])
+  @@index([examPaperId])
+  @@map("exam_paper_sections")
+}
+
+// -----------------------------------------------------------------------------
+// PROMPT 5: EXAM SYLLABUS TREE & BILINGUAL SYLLABUS MANAGEMENT
+// -----------------------------------------------------------------------------
+
+enum ExamSyllabusStatus {
+  DRAFT
+  REVIEW_PENDING
+  CHANGES_REQUESTED
+  APPROVED
+  PUBLISHED
+  ARCHIVED
+}
+
+enum ExamSyllabusNodeType {
+  SUBJECT
+  SECTION
+  UNIT
+  TOPIC
+  SUBTOPIC
+  KNOWLEDGE_AREA
+  THEME
+  OTHER
+}
+
+enum ExamSyllabusScopeType {
+  GLOBAL
+  STAGE
+  PAPER
+}
+
+model ExamSyllabus {
+  id                    String             @id @default(uuid())
+  examCycleId           String
+  examPatternId         String
+  revisionNumber        Int
+  sourceSyllabusId      String?
+  titleEn               String
+  titleKn               String
+  descriptionEn         String?            @db.Text
+  descriptionKn         String?            @db.Text
+  generalInstructionsEn String?            @db.Text
+  generalInstructionsKn String?            @db.Text
+  sourceResourceId      String?
+  sourceReference       String?
+  status                ExamSyllabusStatus @default(DRAFT)
+  isCurrent             Boolean            @default(false)
+  reviewSubmittedAt     DateTime?
+  reviewedAt            DateTime?
+  reviewedByAdminId     String?
+  approvedAt            DateTime?
+  approvedByAdminId     String?
+  publishedAt           DateTime?
+  publishedByAdminId    String?
+  archivedAt            DateTime?
+  createdByAdminId      String?
+  updatedByAdminId      String?
+  version               Int                @default(1)
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+
+  examCycle        ExamCycle             @relation(fields: [examCycleId], references: [id], onDelete: Cascade)
+  examPattern      ExamPattern           @relation(fields: [examPatternId], references: [id], onDelete: Cascade)
+  sourceSyllabus   ExamSyllabus?         @relation("SyllabusCloningRelation", fields: [sourceSyllabusId], references: [id], onDelete: SetNull)
+  derivedSyllabi   ExamSyllabus[]        @relation("SyllabusCloningRelation")
+  sourceResource   ExamOfficialResource? @relation(fields: [sourceResourceId], references: [id], onDelete: SetNull)
+  reviewedByAdmin  AdminUser?            @relation("SyllabusReviewedBy", fields: [reviewedByAdminId], references: [id], onDelete: SetNull)
+  approvedByAdmin  AdminUser?            @relation("SyllabusApprovedBy", fields: [approvedByAdminId], references: [id], onDelete: SetNull)
+  publishedByAdmin AdminUser?            @relation("SyllabusPublishedBy", fields: [publishedByAdminId], references: [id], onDelete: SetNull)
+  createdByAdmin   AdminUser?            @relation("SyllabusCreatedBy", fields: [createdByAdminId], references: [id], onDelete: SetNull)
+  updatedByAdmin   AdminUser?            @relation("SyllabusUpdatedBy", fields: [updatedByAdminId], references: [id], onDelete: SetNull)
+  nodes            ExamSyllabusNode[]
+
+  @@unique([examCycleId, revisionNumber])
+  @@index([examCycleId])
+  @@index([examPatternId])
+  @@index([examCycleId, status, isCurrent])
+  @@index([updatedAt])
+  @@map("exam_syllabi")
+}
+
+model ExamSyllabusNode {
+  id              String                @id @default(uuid())
+  examSyllabusId  String
+  parentId        String?
+  code            String
+  nodeType        ExamSyllabusNodeType
+  scopeType       ExamSyllabusScopeType @default(GLOBAL)
+  examStageId     String?
+  examPaperId     String?
+  nameEn          String
+  nameKn          String
+  shortNameEn     String?
+  shortNameKn     String?
+  descriptionEn   String?               @db.Text
+  descriptionKn   String?               @db.Text
+  officialTextEn  String?               @db.Text
+  officialTextKn  String?               @db.Text
+  sourceReference String?
+  displayOrder    Int
+  depth           Int                   @default(1)
+  isActive        Boolean               @default(true)
+  version         Int                   @default(1)
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+
+  examSyllabus ExamSyllabus       @relation(fields: [examSyllabusId], references: [id], onDelete: Cascade)
+  parent       ExamSyllabusNode?  @relation("SyllabusNodeHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children     ExamSyllabusNode[] @relation("SyllabusNodeHierarchy")
+  examStage    ExamStage?         @relation(fields: [examStageId], references: [id], onDelete: SetNull)
+  examPaper    ExamPaper?         @relation(fields: [examPaperId], references: [id], onDelete: SetNull)
+  mcqQuestions McqQuestion[]
+
+  @@unique([examSyllabusId, code])
+  @@index([examSyllabusId])
+  @@index([parentId])
+  @@index([examStageId])
+  @@index([examPaperId])
+  @@index([examSyllabusId, isActive])
+  @@index([examSyllabusId, nodeType])
+  @@map("exam_syllabus_nodes")
+}
+
+// ==========================================
+// ACADEMIC TAXONOMY & STANDALONE STAGES
+// ==========================================
+
+enum TaxonomyModuleType {
+  STUDY_MATERIAL
+  MCQ
+  GENERAL
+}
+
+model AcademicCategory {
+  id               String             @id @default(uuid())
+  moduleType       TaxonomyModuleType @default(GENERAL)
+  code             String
+  nameEn           String
+  nameKn           String
+  shortNameEn      String?
+  shortNameKn      String?
+  slugEn           String
+  slugKn           String
+  descriptionEn    String?            @db.Text
+  descriptionKn    String?            @db.Text
+  displayOrder     Int                @default(1)
+  isActive         Boolean            @default(true)
+  createdByAdminId String?
+  updatedByAdminId String?
+  version          Int                @default(1)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  subcategories         AcademicSubcategory[]
+  studyMaterialMappings StudyMaterialTaxonomyMapping[]
+  mcqQuestions          McqQuestion[]
+
+  testDistributions     TestCategoryDistribution[]
+  topicPracticeConfigs  TopicPracticeConfig[]
+  practiceSessions      PracticeSession[]
+  taxonomyPracticeStats StudentTaxonomyPracticeStats[]
+  currentAffairs        CurrentAffairAcademicCategory[]
+
+  @@unique([moduleType, code])
+  @@unique([moduleType, slugEn])
+  @@unique([moduleType, slugKn])
+  @@index([code])
+  @@index([moduleType, isActive, displayOrder])
+  @@map("academic_categories")
+}
+
+model AcademicSubcategory {
+  id               String   @id @default(uuid())
+  categoryId       String
+  code             String
+  nameEn           String
+  nameKn           String
+  shortNameEn      String?
+  shortNameKn      String?
+  slugEn           String
+  slugKn           String
+  descriptionEn    String?  @db.Text
+  descriptionKn    String?  @db.Text
+  displayOrder     Int      @default(1)
+  isActive         Boolean  @default(true)
+  createdByAdminId String?
+  updatedByAdminId String?
+  version          Int      @default(1)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  category              AcademicCategory               @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  topics                AcademicTopic[]
+  studyMaterialMappings StudyMaterialTaxonomyMapping[]
+  mcqQuestions          McqQuestion[]
+
+  testDistributions     TestSubcategoryDistribution[]
+  topicPracticeConfigs  TopicPracticeConfig[]
+  practiceSessions      PracticeSession[]
+  taxonomyPracticeStats StudentTaxonomyPracticeStats[]
+
+  @@unique([categoryId, code])
+  @@unique([categoryId, slugEn])
+  @@unique([categoryId, slugKn])
+  @@index([categoryId, displayOrder])
+  @@index([categoryId, isActive])
+  @@map("academic_subcategories")
+}
+
+model AcademicTopic {
+  id               String   @id @default(uuid())
+  subcategoryId    String
+  code             String
+  nameEn           String
+  nameKn           String
+  shortNameEn      String?
+  shortNameKn      String?
+  slugEn           String
+  slugKn           String
+  descriptionEn    String?  @db.Text
+  descriptionKn    String?  @db.Text
+  displayOrder     Int      @default(1)
+  isActive         Boolean  @default(true)
+  createdByAdminId String?
+  updatedByAdminId String?
+  version          Int      @default(1)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  subcategory           AcademicSubcategory            @relation(fields: [subcategoryId], references: [id], onDelete: Cascade)
+  knowledgeAreas        AcademicKnowledgeArea[]
+  studyMaterialMappings StudyMaterialTaxonomyMapping[]
+  mcqQuestions          McqQuestion[]
+
+  topicPracticeConfigs  TopicPracticeConfig[]
+  practiceSessions      PracticeSession[]
+  taxonomyPracticeStats StudentTaxonomyPracticeStats[]
+  currentAffairs        CurrentAffairAcademicTopic[]
+
+  @@unique([subcategoryId, code])
+  @@unique([subcategoryId, slugEn])
+  @@unique([subcategoryId, slugKn])
+  @@index([subcategoryId, displayOrder])
+  @@index([subcategoryId, isActive])
+  @@map("academic_topics")
+}
+
+model AcademicKnowledgeArea {
+  id               String   @id @default(uuid())
+  topicId          String
+  code             String
+  nameEn           String
+  nameKn           String
+  shortNameEn      String?
+  shortNameKn      String?
+  slugEn           String
+  slugKn           String
+  descriptionEn    String?  @db.Text
+  descriptionKn    String?  @db.Text
+  displayOrder     Int      @default(1)
+  isActive         Boolean  @default(true)
+  createdByAdminId String?
+  updatedByAdminId String?
+  version          Int      @default(1)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  topic                 AcademicTopic                  @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  studyMaterialMappings StudyMaterialTaxonomyMapping[]
+  mcqQuestions          McqQuestion[]
+
+  topicPracticeConfigs  TopicPracticeConfig[]
+  practiceSessions      PracticeSession[]
+  taxonomyPracticeStats StudentTaxonomyPracticeStats[]
+
+  @@unique([topicId, code])
+  @@unique([topicId, slugEn])
+  @@unique([topicId, slugKn])
+  @@index([topicId, displayOrder])
+  @@index([topicId, isActive])
+  @@map("academic_knowledge_areas")
+}
+
+// ==========================================
+// PROMPT 07: STUDY MATERIAL FOUNDATION MODELS
+// ==========================================
+
+enum StudyMaterialContentType {
+  ARTICLE
+  STUDY_NOTE
+  LESSON
+  CHAPTER
+  GUIDE
+  REFERENCE
+}
+
+enum StudyMaterialRecordStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum StudyMaterialLocaleStatus {
+  DRAFT
+}
+
+enum StudyMaterialLocaleRevisionStatus {
+  DRAFT
+  REVIEW_PENDING
+  CHANGES_REQUESTED
+  APPROVED
+  PUBLISHED
+  ARCHIVED
+}
+
+enum StudyMaterialReviewAction {
+  SUBMITTED
+  COMMENTED
+  CHANGES_REQUESTED
+  RESUBMITTED
+  APPROVED
+  PUBLISHED
+  ARCHIVED
+}
+
+model StudyMaterial {
+  id                String                    @id @default(uuid())
+  code              String                    @unique
+  logoUrl           String?                   @db.Text
+  contentType       StudyMaterialContentType  @default(ARTICLE)
+  recordStatus      StudyMaterialRecordStatus @default(ACTIVE)
+  createdByAdminId  String?
+  updatedByAdminId  String?
+  archivedAt        DateTime?
+  archivedByAdminId String?
+  version           Int                       @default(1)
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
+
+  locales          StudyMaterialLocale[]
+  taxonomyMappings StudyMaterialTaxonomyMapping[]
+  accessPolicy     StudyMaterialAccessPolicy?
+
+  @@index([code])
+  @@index([contentType, recordStatus])
+  @@index([updatedAt])
+  @@map("study_materials")
+}
+
+enum StudyMaterialAccessType {
+  FREE
+  PAID
+  FREEMIUM
+}
+
+enum StudyMaterialPreviewMode {
+  FULL
+  SUMMARY_ONLY
+  CONTENT_BOUNDARY
+}
+
+model StudyMaterialAccessPolicy {
+  id                           String                  @id @default(uuid())
+  studyMaterialId              String                  @unique
+  accessType                   StudyMaterialAccessType @default(FREE)
+  entitlementKey               String                  @unique
+  teaserMode                   String                  @default("SUMMARY_ONLY")
+  freeMcqSampleCount           Int                     @default(0)
+  freeQuickRevisionSampleCount Int                     @default(0)
+  isActive                     Boolean                 @default(true)
+  version                      Int                     @default(1)
+  createdByAdminId             String?
+  updatedByAdminId             String?
+  createdAt                    DateTime                @default(now())
+  updatedAt                    DateTime                @updatedAt
+
+  studyMaterial  StudyMaterial                      @relation(fields: [studyMaterialId], references: [id], onDelete: Cascade)
+  previewConfigs StudyMaterialLocalePreviewConfig[]
+
+  @@index([studyMaterialId])
+  @@index([accessType])
+  @@index([entitlementKey])
+  @@map("study_material_access_policies")
+}
+
+model StudyMaterialLocalePreviewConfig {
+  id                  String                   @id @default(uuid())
+  accessPolicyId      String
+  localeRevisionId    String
+  language            String
+  previewMode         StudyMaterialPreviewMode @default(FULL)
+  previewEndNodeId    String?
+  previewEndInclusive Boolean                  @default(true)
+  paywallTitle        String?
+  paywallMessage      String?                  @db.Text
+  version             Int                      @default(1)
+  createdByAdminId    String?
+  updatedByAdminId    String?
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+
+  accessPolicy   StudyMaterialAccessPolicy   @relation(fields: [accessPolicyId], references: [id], onDelete: Cascade)
+  localeRevision StudyMaterialLocaleRevision @relation(fields: [localeRevisionId], references: [id], onDelete: Cascade)
+
+  @@unique([accessPolicyId, localeRevisionId])
+  @@index([accessPolicyId])
+  @@index([localeRevisionId])
+  @@map("study_material_locale_preview_configs")
+}
+
+model StudyMaterialLocale {
+  id               String                    @id @default(uuid())
+  studyMaterialId  String
+  language         String
+  title            String
+  shortTitle       String?
+  slug             String
+  summary          String?                   @db.Text
+  contentJson      Json?
+  plainTextContent String?                   @db.Text
+  localeStatus     StudyMaterialLocaleStatus @default(DRAFT)
+  createdByAdminId String?
+  updatedByAdminId String?
+  version          Int                       @default(1)
+  createdAt        DateTime                  @default(now())
+  updatedAt        DateTime                  @updatedAt
+
+  studyMaterial StudyMaterial                 @relation(fields: [studyMaterialId], references: [id], onDelete: Cascade)
+  revisions     StudyMaterialLocaleRevision[]
+
+  @@unique([studyMaterialId, language])
+  @@unique([language, slug])
+  @@index([language, slug])
+  @@index([studyMaterialId, language])
+  @@map("study_material_locales")
+}
+
+model StudyMaterialLocaleRevision {
+  id                    String  @id @default(uuid())
+  studyMaterialLocaleId String
+  revisionNumber        Int     @default(1)
+  sourceRevisionId      String?
+
+  // Content
+  title            String
+  shortTitle       String?
+  slug             String
+  summary          String? @db.Text
+  contentJson      Json?
+  plainTextContent String? @db.Text
+
+  // SEO
+  metaTitle         String?
+  metaDescription   String? @db.Text
+  socialTitle       String?
+  socialDescription String? @db.Text
+  canonicalUrl      String?
+  robotsIndex       Boolean @default(true)
+  robotsFollow      Boolean @default(true)
+
+  // Workflow & Audit Timestamps
+  status             StudyMaterialLocaleRevisionStatus @default(DRAFT)
+  reviewSubmittedAt  DateTime?
+  reviewedAt         DateTime?
+  reviewedByAdminId  String?
+  approvedAt         DateTime?
+  approvedByAdminId  String?
+  publishedAt        DateTime?
+  publishedByAdminId String?
+  archivedAt         DateTime?
+
+  // Flags & Operational
+  isCurrentDraft     Boolean  @default(true)
+  isCurrentPublished Boolean  @default(false)
+  createdByAdminId   String?
+  updatedByAdminId   String?
+  version            Int      @default(1)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  studyMaterialLocale StudyMaterialLocale                @relation(fields: [studyMaterialLocaleId], references: [id], onDelete: Cascade)
+  sourceRevision      StudyMaterialLocaleRevision?       @relation("RevisionHistory", fields: [sourceRevisionId], references: [id], onDelete: SetNull)
+  derivedRevisions    StudyMaterialLocaleRevision[]      @relation("RevisionHistory")
+  reviewEvents        StudyMaterialReviewEvent[]
+  previewConfigs      StudyMaterialLocalePreviewConfig[]
+
+  @@unique([studyMaterialLocaleId, revisionNumber])
+  @@index([studyMaterialLocaleId, status])
+  @@index([status])
+  @@index([studyMaterialLocaleId, isCurrentDraft], map: "sm_locale_rev_draft_idx")
+  @@index([studyMaterialLocaleId, isCurrentPublished], map: "sm_locale_rev_pub_idx")
+  @@map("study_material_locale_revisions")
+}
+
+model StudyMaterialReviewEvent {
+  id               String                    @id @default(uuid())
+  localeRevisionId String
+  action           StudyMaterialReviewAction
+  comment          String?                   @db.Text
+  adminUserId      String
+  createdAt        DateTime                  @default(now())
+
+  localeRevision StudyMaterialLocaleRevision @relation(fields: [localeRevisionId], references: [id], onDelete: Cascade)
+
+  @@index([localeRevisionId])
+  @@index([adminUserId])
+  @@index([createdAt])
+  @@map("study_material_review_events")
+}
+
+model StudyMaterialTaxonomyMapping {
+  id               String   @id @default(uuid())
+  studyMaterialId  String
+  categoryId       String
+  subcategoryId    String
+  topicId          String
+  knowledgeAreaId  String?
+  isPrimary        Boolean  @default(false)
+  createdByAdminId String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  studyMaterial StudyMaterial          @relation(fields: [studyMaterialId], references: [id], onDelete: Cascade)
+  category      AcademicCategory       @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  subcategory   AcademicSubcategory    @relation(fields: [subcategoryId], references: [id], onDelete: Cascade)
+  topic         AcademicTopic          @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  knowledgeArea AcademicKnowledgeArea? @relation(fields: [knowledgeAreaId], references: [id], onDelete: SetNull)
+
+  @@unique([studyMaterialId, categoryId, subcategoryId, topicId, knowledgeAreaId])
+  @@index([studyMaterialId])
+  @@index([categoryId])
+  @@index([subcategoryId])
+  @@index([topicId])
+  @@index([knowledgeAreaId])
+  @@index([studyMaterialId, isPrimary])
+  @@map("study_material_taxonomy_mappings")
+}
+
+// ==========================================
+// MCQ Question Bank & Mock Test Series Domain
+// ==========================================
+
+enum McqDifficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum McqWorkflowStatus {
+  DRAFT
+  REVIEW_PENDING
+  CHANGES_REQUESTED
+  APPROVED
+  ARCHIVED
+}
+
+enum McqSourceType {
+  ORIGINAL
+  PREVIOUS_YEAR_QUESTION
+  OFFICIAL_SOURCE
+  REFERENCE
+}
+
+model McqSequenceCounter {
+  id        String   @id @default("mcq_counter")
+  lastSeq   Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  @@map("mcq_sequence_counters")
+}
+
+model McqQuestion {
+  id             String            @id @default(uuid())
+  code           String            @unique // e.g. MCQ_000001
+  seqNumber      Int?              @unique
+  questionTextEn String            @db.Text
+  questionTextKn String            @db.Text
+  optionA_En     String            @db.Text
+  optionA_Kn     String            @db.Text
+  optionB_En     String            @db.Text
+  optionB_Kn     String            @db.Text
+  optionC_En     String            @db.Text
+  optionC_Kn     String            @db.Text
+  optionD_En     String            @db.Text
+  optionD_Kn     String            @db.Text
+  correctOption  String // 'A' | 'B' | 'C' | 'D'
+  explanationEn  String?           @db.Text
+  explanationKn  String?           @db.Text
+  difficulty     McqDifficulty     @default(MEDIUM)
+  positiveMarks  Decimal           @default(1.00) @db.Decimal(5, 2)
+  negativeMarks  Decimal           @default(0.25) @db.Decimal(5, 2)
+  status         McqWorkflowStatus @default(DRAFT)
+
+  // Academic Taxonomy Mapping
+  categoryId      String?
+  subcategoryId   String?
+  topicId         String?
+  knowledgeAreaId String?
+
+  // Optional Exam & Syllabus Mapping
+  examCycleId    String?
+  syllabusNodeId String?
+
+  // Source & PYQ Information
+  sourceType        McqSourceType? @default(ORIGINAL)
+  sourceName        String?
+  sourceUrl         String?
+  isPyq             Boolean        @default(false)
+  pyqExamName       String?
+  pyqYear           Int?
+  pyqPaperStage     String?
+  pyqQuestionNumber String?
+  pyqNotes          String?        @db.Text
+
+  // Duplicate Stem Indexes
+  normalizedStemEn String? @db.Text
+  normalizedStemKn String? @db.Text
+
+  isActive          Boolean  @default(true)
+  createdByAdminId  String?
+  reviewedByAdminId String?
+  approvedByAdminId String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  examCycle     ExamCycle?             @relation(fields: [examCycleId], references: [id], onDelete: SetNull)
+  syllabusNode  ExamSyllabusNode?      @relation(fields: [syllabusNodeId], references: [id], onDelete: SetNull)
+  category      AcademicCategory?      @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  subcategory   AcademicSubcategory?   @relation(fields: [subcategoryId], references: [id], onDelete: SetNull)
+  topic         AcademicTopic?         @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  knowledgeArea AcademicKnowledgeArea? @relation(fields: [knowledgeAreaId], references: [id], onDelete: SetNull)
+
+  mockTestQuestions        MockTestQuestion[]
+  practiceSessionQuestions PracticeSessionQuestion[]
+  practiceHistories        StudentMcqPracticeHistory[]
+  performanceEvents        StudentPerformanceEvent[]
+  currentAffairId          String?
+  currentAffair            CurrentAffair?              @relation(fields: [currentAffairId], references: [id], onDelete: SetNull)
+
+  @@index([code])
+  @@index([examCycleId])
+  @@index([syllabusNodeId])
+  @@index([categoryId])
+  @@index([subcategoryId])
+  @@index([topicId])
+  @@index([knowledgeAreaId])
+  @@index([difficulty])
+  @@index([status])
+  @@index([isPyq])
+  @@index([isActive])
+  @@map("mcq_questions")
+}
+
+enum TestWorkflowStatus {
+  DRAFT
+  REVIEW_PENDING
+  CHANGES_REQUESTED
+  APPROVED
+  PUBLISHED
+  ARCHIVED
+}
+
+enum TestSelectionMode {
+  MANUAL
+  AUTOMATIC
+}
+
+enum TestScoringPolicy {
+  TEST_DEFAULT
+  MCQ_DEFAULT
+}
+
+enum TestAccessClassification {
+  FREE
+  PAID
+  FREEMIUM
+}
+
+enum PyqPreference {
+  ANY
+  EXCLUDE_PYQ
+  PYQ_ONLY
+}
+
+model TestSequenceCounter {
+  id        String   @id @default("singleton")
+  lastValue Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  @@map("test_sequence_counters")
+}
+
+model MockTest {
+  id                   String                   @id @default(uuid())
+  code                 String                   @unique
+  seqNumber            Int?                     @unique
+  titleEn              String
+  titleKn              String
+  descriptionEn        String?                  @db.Text
+  descriptionKn        String?                  @db.Text
+  instructionsEn       String?                  @db.Text
+  instructionsKn       String?                  @db.Text
+  examCycleId          String?
+  examStageId          String?
+  examPaperId          String?
+  totalQuestions       Int                      @default(0)
+  durationMinutes      Int                      @default(60)
+  totalMarks           Decimal                  @default(0.00) @db.Decimal(8, 2)
+  passingPercentage    Decimal                  @default(40.00) @db.Decimal(5, 2)
+  accessClassification TestAccessClassification @default(FREE)
+  scoringPolicy        TestScoringPolicy        @default(TEST_DEFAULT)
+  positiveMarks        Decimal                  @default(1.00) @db.Decimal(5, 2)
+  negativeMarks        Decimal                  @default(0.25) @db.Decimal(5, 2)
+  selectionMode        TestSelectionMode        @default(MANUAL)
+  pyqPreference        PyqPreference            @default(ANY)
+  generationSeed       String?
+  status               TestWorkflowStatus       @default(DRAFT)
+  isPublished          Boolean                  @default(false)
+  createdByAdminId     String?
+  submittedByAdminId   String?
+  reviewedByAdminId    String?
+  approvedByAdminId    String?
+  publishedByAdminId   String?
+  rejectionReason      String?                  @db.Text
+  createdAt            DateTime                 @default(now())
+  updatedAt            DateTime                 @updatedAt
+
+  examCycle ExamCycle? @relation(fields: [examCycleId], references: [id], onDelete: SetNull)
+  examStage ExamStage? @relation(fields: [examStageId], references: [id], onDelete: SetNull)
+  examPaper ExamPaper? @relation(fields: [examPaperId], references: [id], onDelete: SetNull)
+
+  questions                MockTestQuestion[]
+  categoryDistributions    TestCategoryDistribution[]
+  subcategoryDistributions TestSubcategoryDistribution[]
+  difficultyDistributions  TestDifficultyDistribution[]
+  testSeriesEntries        TestSeriesTest[]
+  rankedConfigs            RankedTest[]
+
+  @@index([code])
+  @@index([examCycleId])
+  @@index([examStageId])
+  @@index([examPaperId])
+  @@index([status])
+  @@index([isPublished])
+  @@map("mock_tests")
+}
+
+model TestCategoryDistribution {
+  id          String   @id @default(uuid())
+  mockTestId  String
+  categoryId  String
+  targetCount Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  mockTest MockTest         @relation(fields: [mockTestId], references: [id], onDelete: Cascade)
+  category AcademicCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([mockTestId, categoryId])
+  @@index([mockTestId])
+  @@map("test_category_distributions")
+}
+
+model TestSubcategoryDistribution {
+  id            String   @id @default(uuid())
+  mockTestId    String
+  subcategoryId String
+  targetCount   Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  mockTest    MockTest            @relation(fields: [mockTestId], references: [id], onDelete: Cascade)
+  subcategory AcademicSubcategory @relation(fields: [subcategoryId], references: [id], onDelete: Cascade)
+
+  @@unique([mockTestId, subcategoryId])
+  @@index([mockTestId])
+  @@map("test_subcategory_distributions")
+}
+
+model TestDifficultyDistribution {
+  id          String        @id @default(uuid())
+  mockTestId  String
+  difficulty  McqDifficulty
+  targetCount Int           @default(0)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  mockTest MockTest @relation(fields: [mockTestId], references: [id], onDelete: Cascade)
+
+  @@unique([mockTestId, difficulty])
+  @@index([mockTestId])
+  @@map("test_difficulty_distributions")
+}
+
+model MockTestQuestion {
+  id                    String         @id @default(uuid())
+  mockTestId            String
+  questionId            String
+  displayOrder          Int            @default(1)
+  sectionTitleEn        String?
+  sectionTitleKn        String?
+  selectionSource       String         @default("MANUAL") // 'MANUAL' | 'AUTOMATIC'
+  selectedCategoryId    String?
+  selectedSubcategoryId String?
+  selectedDifficulty    McqDifficulty?
+  positiveMarks         Decimal        @default(1.00) @db.Decimal(5, 2)
+  negativeMarks         Decimal        @default(0.25) @db.Decimal(5, 2)
+
+  // Immutable Publication Snapshots
+  snapshotQuestionEn    String?        @db.Text
+  snapshotQuestionKn    String?        @db.Text
+  snapshotOptionA_En    String?        @db.Text
+  snapshotOptionA_Kn    String?        @db.Text
+  snapshotOptionB_En    String?        @db.Text
+  snapshotOptionB_Kn    String?        @db.Text
+  snapshotOptionC_En    String?        @db.Text
+  snapshotOptionC_Kn    String?        @db.Text
+  snapshotOptionD_En    String?        @db.Text
+  snapshotOptionD_Kn    String?        @db.Text
+  snapshotCorrectOption String?
+  snapshotExplanationEn String?        @db.Text
+  snapshotExplanationKn String?        @db.Text
+  snapshotDifficulty    McqDifficulty?
+  snapshotPositiveMarks Decimal?       @db.Decimal(5, 2)
+  snapshotNegativeMarks Decimal?       @db.Decimal(5, 2)
+  createdAt             DateTime       @default(now())
+
+  mockTest MockTest    @relation(fields: [mockTestId], references: [id], onDelete: Cascade)
+  question McqQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  attemptAnswers RankedAttemptAnswer[]
+
+  @@unique([mockTestId, questionId])
+  @@unique([mockTestId, displayOrder])
+  @@index([mockTestId])
+  @@index([questionId])
+  @@map("mock_test_questions")
+}
+
+enum McqImportMode {
+  ADD_NEW
+  UPDATE_EXISTING
+}
+
+enum McqImportStatus {
+  UPLOADED
+  VALIDATING
+  VALIDATED
+  IMPORTING
+  COMPLETED
+  FAILED
+}
+
+model McqBulkImportSession {
+  id               String          @id @default(uuid())
+  originalFileName String
+  fileType         String // 'XLSX' | 'CSV'
+  importMode       McqImportMode   @default(ADD_NEW)
+  totalRows        Int             @default(0)
+  validRows        Int             @default(0)
+  errorRows        Int             @default(0)
+  warningRows      Int             @default(0)
+  importedRows     Int             @default(0)
+  status           McqImportStatus @default(VALIDATED)
+  startedByAdminId String?
+  failureReason    String?         @db.Text
+  reportSummary    Json?
+  createdAt        DateTime        @default(now())
+  completedAt      DateTime?
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("mcq_bulk_import_sessions")
+}
+
+// -----------------------------------------------------------------------------
+// TEST SERIES MANAGEMENT MODELS & ENUMS
+// -----------------------------------------------------------------------------
+
+enum TestSeriesWorkflowStatus {
+  DRAFT
+  REVIEW_PENDING
+  CHANGES_REQUESTED
+  APPROVED
+  PUBLISHED
+  ARCHIVED
+}
+
+enum TestSeriesReleaseMode {
+  ALL_AVAILABLE
+  SCHEDULED
+  SEQUENTIAL
+}
+
+enum SeriesQuestionReusePolicy {
+  ALLOW_REPEATS
+  NO_REPEAT
+}
+
+enum SeriesTestEntryType {
+  PRACTICE
+  RANKED
+}
+
+model TestSeriesSequenceCounter {
+  id        String   @id @default("singleton")
+  lastValue Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  @@map("test_series_sequence_counters")
+}
+
+model TestSeries {
+  id                   String                    @id @default(uuid())
+  seqNumber            Int?                      @unique
+  code                 String                    @unique
+  titleEn              String
+  titleKn              String
+  descriptionEn        String?                   @db.Text
+  descriptionKn        String?                   @db.Text
+  instructionsEn       String?                   @db.Text
+  instructionsKn       String?                   @db.Text
+  examProgrammeId      String
+  examStageId          String?
+  examPaperId          String?
+  accessClassification TestAccessClassification  @default(FREE)
+  releaseMode          TestSeriesReleaseMode     @default(ALL_AVAILABLE)
+  questionReusePolicy  SeriesQuestionReusePolicy @default(NO_REPEAT)
+  seriesStartAt        DateTime?
+  seriesEndAt          DateTime?
+  status               TestSeriesWorkflowStatus  @default(DRAFT)
+  isPublished          Boolean                   @default(false)
+  rejectionReason      String?                   @db.Text
+  createdByAdminId     String?
+  submittedByAdminId   String?
+  reviewedByAdminId    String?
+  approvedByAdminId    String?
+  publishedByAdminId   String?
+  createdAt            DateTime                  @default(now())
+  updatedAt            DateTime                  @updatedAt
+
+  examProgramme ExamProgramme @relation(fields: [examProgrammeId], references: [id], onDelete: Cascade)
+  examStage ExamStage? @relation(fields: [examStageId], references: [id], onDelete: SetNull)
+  examPaper ExamPaper? @relation(fields: [examPaperId], references: [id], onDelete: SetNull)
+
+  tests TestSeriesTest[]
+
+  @@index([code])
+  @@index([status])
+  @@index([examProgrammeId])
+  @@index([isPublished])
+  @@map("test_series")
+}
+
+model TestSeriesTest {
+  id             String              @id @default(uuid())
+  testSeriesId   String
+  mockTestId     String
+  orderIndex     Int
+  entryType      SeriesTestEntryType @default(PRACTICE)
+  availableFrom  DateTime?
+  availableUntil DateTime?
+  labelEn        String?
+  labelKn        String?
+  isFeatured     Boolean             @default(false)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  testSeries TestSeries @relation(fields: [testSeriesId], references: [id], onDelete: Cascade)
+  mockTest   MockTest   @relation(fields: [mockTestId], references: [id], onDelete: Cascade)
+
+  rankedConfigs RankedTest[]
+
+  @@unique([testSeriesId, mockTestId])
+  @@unique([testSeriesId, orderIndex])
+  @@index([testSeriesId])
+  @@index([mockTestId])
+  @@map("test_series_tests")
+}
+
+// Prompt 14 — Ranked Test Engine Enums & Models
+
+enum RankedTestMode {
+  ANYTIME_RANKED
+  SCHEDULED_LIVE
+}
+
+enum RankedTestStatus {
+  DRAFT
+  ACTIVE
+  CLOSED
+  RESULTS_PUBLISHED
+  ARCHIVED
+}
+
+enum RankedResultPublicationStatus {
+  PENDING
+  READY
+  PUBLISHED
+}
+
+enum RankedSolutionReleasePolicy {
+  AFTER_RESULTS_PUBLISHED
+  NEVER
+}
+
+enum RankedAttemptStatus {
+  ACTIVE
+  SUBMITTED
+  AUTO_SUBMITTED
+  INVALIDATED
+}
+
+enum RankedSubmissionType {
+  MANUAL
+  AUTO_TIMED_OUT
+}
+
+model RankedTest {
+  id                      String                        @id @default(uuid())
+  code                    String                        @unique
+  mockTestId              String
+  testSeriesTestId        String?
+  mode                    RankedTestMode
+  status                  RankedTestStatus              @default(DRAFT)
+  availableFrom           DateTime
+  startDeadlineAt         DateTime?
+  scheduledStartAt        DateTime?
+  scheduledEndAt          DateTime?
+  latestJoinAt            DateTime?
+  resultPublicationStatus RankedResultPublicationStatus @default(PENDING)
+  solutionReleasePolicy   RankedSolutionReleasePolicy   @default(AFTER_RESULTS_PUBLISHED)
+  createdByAdminId        String?
+  publishedByAdminId      String?
+  closedAt                DateTime?
+  resultsPublishedAt      DateTime?
+  createdAt               DateTime                      @default(now())
+  updatedAt               DateTime                      @updatedAt
+
+  mockTest       MockTest        @relation(fields: [mockTestId], references: [id], onDelete: Cascade)
+  testSeriesTest TestSeriesTest? @relation(fields: [testSeriesTestId], references: [id], onDelete: SetNull)
+
+  attempts RankedAttempt[]
+  results  RankedResult[]
+
+  @@index([mockTestId])
+  @@index([testSeriesTestId])
+  @@index([status])
+  @@index([mode])
+  @@map("ranked_tests")
+}
+
+model RankedAttempt {
+  id                   String                @id @default(uuid())
+  rankedTestId         String
+  studentId            String
+  status               RankedAttemptStatus   @default(ACTIVE)
+  submissionType       RankedSubmissionType?
+  startedAt            DateTime              @default(now())
+  expiresAt            DateTime
+  submittedAt          DateTime?
+  preparationLanguage  PreparationLanguage   @default(kn)
+  totalQuestions       Int                   @default(0)
+  attemptedCount       Int                   @default(0)
+  correctCount         Int                   @default(0)
+  wrongCount           Int                   @default(0)
+  unansweredCount      Int                   @default(0)
+  rawScore             Decimal               @default(0.00) @db.Decimal(8, 2)
+  maximumMarks         Decimal               @default(0.00) @db.Decimal(8, 2)
+  negativeMarksApplied Decimal               @default(0.00) @db.Decimal(8, 2)
+  percentage           Decimal               @default(0.00) @db.Decimal(5, 2)
+  timeTakenSeconds     Int                   @default(0)
+  invalidationReason   String?               @db.Text
+  invalidatedByAdminId String?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+
+  rankedTest RankedTest @relation(fields: [rankedTestId], references: [id], onDelete: Cascade)
+  student    User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  answers RankedAttemptAnswer[]
+  result  RankedResult?
+
+  @@unique([rankedTestId, studentId])
+  @@index([rankedTestId])
+  @@index([studentId])
+  @@index([status])
+  @@index([expiresAt])
+  @@map("ranked_attempts")
+}
+
+model RankedAttemptAnswer {
+  id                 String   @id @default(uuid())
+  attemptId          String
+  mockTestQuestionId String
+  selectedOption     String?
+  isMarkedForReview  Boolean  @default(false)
+  answeredAt         DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  attempt          RankedAttempt    @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  mockTestQuestion MockTestQuestion @relation(fields: [mockTestQuestionId], references: [id], onDelete: Cascade)
+
+  @@unique([attemptId, mockTestQuestionId])
+  @@index([attemptId])
+  @@index([mockTestQuestionId])
+  @@map("ranked_attempt_answers")
+}
+
+model RankedResult {
+  id                   String   @id @default(uuid())
+  rankedTestId         String
+  attemptId            String   @unique
+  studentId            String
+  rank                 Int
+  totalParticipants    Int
+  rawScore             Decimal  @db.Decimal(8, 2)
+  correctCount         Int
+  wrongCount           Int
+  unansweredCount      Int
+  timeTakenSeconds     Int
+  publishedAt          DateTime @default(now())
+  rankingPolicyVersion String   @default("v1.0")
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  rankedTest RankedTest    @relation(fields: [rankedTestId], references: [id], onDelete: Cascade)
+  attempt    RankedAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  student    User          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([rankedTestId])
+  @@index([studentId])
+  @@index([rankedTestId, rank])
+  @@map("ranked_results")
+}
+
+// Prompt 15 — Topic Practice Engine Enums & Models
+
+enum PracticeSelectionMode {
+  MIXED
+  NEW_ONLY
+  WEAK_AREA
+  INCORRECT_RETRY
+}
+
+enum PracticeSessionStatus {
+  ACTIVE
+  COMPLETED
+  ABANDONED
+}
+
+enum PracticeAccessClassification {
+  FREE
+  PAID
+  FREEMIUM
+}
+
+model TopicPracticeConfig {
+  id                   String                       @id @default(uuid())
+  categoryId           String?
+  subcategoryId        String?
+  topicId              String?
+  knowledgeAreaId      String?
+  isEnabled            Boolean                      @default(true)
+  accessClassification PracticeAccessClassification @default(FREE)
+  maxQuestions         Int                          @default(50)
+  allowedDifficulties  String?
+  labelEn              String?
+  labelKn              String?
+  createdByAdminId     String?
+  createdAt            DateTime                     @default(now())
+  updatedAt            DateTime                     @updatedAt
+
+  category      AcademicCategory?      @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  subcategory   AcademicSubcategory?   @relation(fields: [subcategoryId], references: [id], onDelete: Cascade)
+  topic         AcademicTopic?         @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  knowledgeArea AcademicKnowledgeArea? @relation(fields: [knowledgeAreaId], references: [id], onDelete: Cascade)
+
+  @@index([categoryId])
+  @@index([subcategoryId])
+  @@index([topicId])
+  @@index([knowledgeAreaId])
+  @@map("topic_practice_configs")
+}
+
+model PracticeSession {
+  id                     String                @id @default(uuid())
+  studentId              String
+  categoryId             String
+  subcategoryId          String?
+  topicId                String?
+  knowledgeAreaId        String?
+  selectionMode          PracticeSelectionMode @default(MIXED)
+  difficultyFilter       McqDifficulty?
+  pyqFilter              String?
+  requestedQuestionCount Int                   @default(10)
+  actualQuestionCount    Int                   @default(10)
+  preparationLanguage    PreparationLanguage   @default(kn)
+  status                 PracticeSessionStatus @default(ACTIVE)
+  startedAt              DateTime              @default(now())
+  completedAt            DateTime?
+  abandonedAt            DateTime?
+  timeSpentSeconds       Int                   @default(0)
+  createdAt              DateTime              @default(now())
+  updatedAt              DateTime              @updatedAt
+
+  student       User                   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  category      AcademicCategory       @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  subcategory   AcademicSubcategory?   @relation(fields: [subcategoryId], references: [id], onDelete: SetNull)
+  topic         AcademicTopic?         @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  knowledgeArea AcademicKnowledgeArea? @relation(fields: [knowledgeAreaId], references: [id], onDelete: SetNull)
+
+  questions PracticeSessionQuestion[]
+
+  @@index([studentId])
+  @@index([categoryId])
+  @@index([subcategoryId])
+  @@index([topicId])
+  @@index([status])
+  @@index([studentId, status])
+  @@map("practice_sessions")
+}
+
+model PracticeSessionQuestion {
+  id                String    @id @default(uuid())
+  sessionId         String
+  questionId        String
+  displayOrder      Int       @default(1)
+  selectedOption    String?
+  isCorrect         Boolean?
+  firstAttemptedAt  DateTime?
+  answeredAt        DateTime?
+  isRevealed        Boolean   @default(false)
+  markedForRevision Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  session  PracticeSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  question McqQuestion     @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, questionId])
+  @@unique([sessionId, displayOrder])
+  @@index([sessionId])
+  @@index([questionId])
+  @@map("practice_session_questions")
+}
+
+model StudentMcqPracticeHistory {
+  id              String    @id @default(uuid())
+  studentId       String
+  mcqQuestionId   String
+  timesSeen       Int       @default(0)
+  timesCorrect    Int       @default(0)
+  timesWrong      Int       @default(0)
+  lastAttemptedAt DateTime?
+  lastCorrectAt   DateTime?
+  lastWrongAt     DateTime?
+  isCurrentlyWeak Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  student  User        @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  question McqQuestion @relation(fields: [mcqQuestionId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, mcqQuestionId])
+  @@index([studentId])
+  @@index([mcqQuestionId])
+  @@index([studentId, isCurrentlyWeak])
+  @@map("student_mcq_practice_histories")
+}
+
+model StudentTaxonomyPracticeStats {
+  id                  String    @id @default(uuid())
+  studentId           String
+  categoryId          String
+  subcategoryId       String?
+  topicId             String?
+  knowledgeAreaId     String?
+  totalAttempted      Int       @default(0)
+  uniqueQuestionsSeen Int       @default(0)
+  totalCorrect        Int       @default(0)
+  totalWrong          Int       @default(0)
+  accuracy            Decimal   @default(0.00) @db.Decimal(5, 2)
+  lastPracticedAt     DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  student       User                   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  category      AcademicCategory       @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  subcategory   AcademicSubcategory?   @relation(fields: [subcategoryId], references: [id], onDelete: SetNull)
+  topic         AcademicTopic?         @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  knowledgeArea AcademicKnowledgeArea? @relation(fields: [knowledgeAreaId], references: [id], onDelete: SetNull)
+
+  @@index([studentId])
+  @@index([studentId, categoryId])
+  @@index([studentId, subcategoryId])
+  @@index([studentId, topicId])
+  @@map("student_taxonomy_practice_stats")
+}
+
+// Prompt 16 — Performance Analytics & Student Weak-Area Engine Enums & Models
+
+enum PerformanceSourceType {
+  RANKED_TEST
+  PRACTICE
+}
+
+enum PerformanceOutcome {
+  CORRECT
+  INCORRECT
+  UNANSWERED
+  REVEALED
+}
+
+enum PerformanceStatus {
+  NOT_STARTED
+  NEEDS_MORE_DATA
+  NEEDS_REVIEW
+  DEVELOPING
+  STRONG
+}
+
+model StudentPerformanceEvent {
+  id                     String                @id @default(uuid())
+  studentId              String
+  sourceType             PerformanceSourceType
+  sourceKey              String
+  canonicalMcqQuestionId String
+
+  rankedTestId    String?
+  rankedAttemptId String?
+  testQuestionId  String?
+
+  practiceSessionId         String?
+  practiceSessionQuestionId String?
+
+  outcome    PerformanceOutcome
+  occurredAt DateTime
+
+  difficulty McqDifficulty?
+  isPyq      Boolean        @default(false)
+
+  categoryId      String
+  subcategoryId   String?
+  topicId         String?
+  knowledgeAreaId String?
+
+  categoryCodeSnapshot      String?
+  categoryNameSnapshot      String?
+  subcategoryCodeSnapshot   String?
+  subcategoryNameSnapshot   String?
+  topicCodeSnapshot         String?
+  topicNameSnapshot         String?
+  knowledgeAreaCodeSnapshot String?
+  knowledgeAreaNameSnapshot String?
+
+  isActive    Boolean   @default(true)
+  retractedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  student  User        @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  question McqQuestion @relation(fields: [canonicalMcqQuestionId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceType, sourceKey])
+  @@index([studentId, occurredAt])
+  @@index([studentId, sourceType, occurredAt])
+  @@index([studentId, canonicalMcqQuestionId])
+  @@index([studentId, categoryId])
+  @@index([studentId, subcategoryId])
+  @@index([studentId, topicId])
+  @@index([isActive, studentId])
+  @@map("student_performance_events")
+}
+
+model StudentTaxonomyPerformance {
+  id               String @id @default(uuid())
+  studentId        String
+  taxonomyLevel    String
+  taxonomyEntityId String
+
+  categoryId      String
+  subcategoryId   String?
+  topicId         String?
+  knowledgeAreaId String?
+
+  totalEvents     Int @default(0)
+  answeredEvents  Int @default(0)
+  correctCount    Int @default(0)
+  incorrectCount  Int @default(0)
+  unansweredCount Int @default(0)
+  revealedCount   Int @default(0)
+
+  uniqueQuestionCount        Int @default(0)
+  latestUniqueCorrectCount   Int @default(0)
+  latestUniqueIncorrectCount Int @default(0)
+
+  recentAccuracy       Decimal? @db.Decimal(5, 2)
+  lifetimeAccuracy     Decimal? @db.Decimal(5, 2)
+  latestUniqueAccuracy Decimal? @db.Decimal(5, 2)
+
+  repeatedWrongCount Int               @default(0)
+  status             PerformanceStatus @default(NOT_STARTED)
+  priorityScore      Decimal           @default(0.00) @db.Decimal(8, 4)
+
+  lastActivityAt DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  student User @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, taxonomyLevel, taxonomyEntityId])
+  @@index([studentId])
+  @@index([studentId, status])
+  @@index([studentId, priorityScore])
+  @@map("student_taxonomy_performance")
+}
+
+// ==========================================
+// CURRENT AFFAIRS MODULE
+// ==========================================
+
+enum CurrentAffairStatus {
+  DRAFT
+  PUBLISHED
+  SCHEDULED
+  ARCHIVED
+  TRASH
+}
+
+enum CurrentAffairVisibility {
+  PUBLIC
+  PRIVATE
+}
+
+enum CurrentAffairImportance {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+model CurrentAffairCategory {
+  id            String   @id @default(uuid())
+  slug          String   @unique
+  nameEn        String
+  nameKn        String
+  descriptionEn String?  @db.Text
+  descriptionKn String?  @db.Text
+  icon          String?
+  displayOrder  Int      @default(0)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  currentAffairs CurrentAffair[]
+
+  @@map("current_affairs_categories")
+}
+
+model CurrentAffairSource {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  logoUrl     String?
+  websiteUrl  String?
+  description String?  @db.Text
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  currentAffairs CurrentAffair[]
+
+  @@map("current_affairs_sources")
+}
+
+model CurrentAffairTag {
+  id        String   @id @default(uuid())
+  slug      String   @unique
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  currentAffairs CurrentAffairTags[]
+
+  @@map("current_affairs_tags")
+}
+
+model CurrentAffair {
+  id   String @id @default(uuid())
+  slug String @unique
+
+  titleEn   String
+  titleKn   String
+  summaryEn String @db.Text
+  summaryKn String @db.Text
+  contentEn String @db.Text
+  contentKn String @db.Text
+
+  categoryId String
+  sourceId   String
+
+  publishedAt        DateTime?
+  readingTimeMinutes Int?
+
+  featuredImageUrl    String?
+  featuredImageFileId String?
+  imageAltEn          String?
+  imageAltKn          String?
+  imageCaptionEn      String?
+  imageCaptionKn      String?
+
+  status        CurrentAffairStatus     @default(DRAFT)
+  visibility    CurrentAffairVisibility @default(PUBLIC)
+  importance    CurrentAffairImportance @default(MEDIUM)
+  isFeatured    Boolean                 @default(false)
+  allowComments Boolean                 @default(true)
+
+  metaTitleEn       String?
+  metaTitleKn       String?
+  metaDescriptionEn String? @db.Text
+  metaDescriptionKn String? @db.Text
+  canonicalUrl      String?
+  socialImage       String?
+  robotsSetting     String?
+
+  createdByAdminId String?
+  updatedByAdminId String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  deletedAt        DateTime?
+
+  category CurrentAffairCategory @relation(fields: [categoryId], references: [id])
+  source   CurrentAffairSource   @relation(fields: [sourceId], references: [id])
+
+  exams            CurrentAffairExam[]
+  stages           CurrentAffairStage[]
+  categoriesMapped CurrentAffairAcademicCategory[]
+  topicsMapped     CurrentAffairAcademicTopic[]
+  tags             CurrentAffairTags[]
+  mcqQuestions     McqQuestion[]
+
+  @@index([status])
+  @@index([publishedAt])
+  @@index([categoryId])
+  @@index([sourceId])
+  @@index([createdAt])
+  @@map("current_affairs")
+}
+
+model CurrentAffairExam {
+  currentAffairId String
+  examCycleId     String
+
+  currentAffair CurrentAffair @relation(fields: [currentAffairId], references: [id], onDelete: Cascade)
+  examCycle     ExamCycle     @relation(fields: [examCycleId], references: [id], onDelete: Cascade)
+
+  @@id([currentAffairId, examCycleId])
+  @@map("current_affair_exams")
+}
+
+model CurrentAffairStage {
+  currentAffairId String
+  examStageId     String
+
+  currentAffair CurrentAffair @relation(fields: [currentAffairId], references: [id], onDelete: Cascade)
+  examStage     ExamStage     @relation(fields: [examStageId], references: [id], onDelete: Cascade)
+
+  @@id([currentAffairId, examStageId])
+  @@map("current_affair_stages")
+}
+
+model CurrentAffairAcademicCategory {
+  currentAffairId String
+  categoryId      String
+
+  currentAffair CurrentAffair    @relation(fields: [currentAffairId], references: [id], onDelete: Cascade)
+  category      AcademicCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([currentAffairId, categoryId])
+  @@map("current_affair_academic_categories")
+}
+
+model CurrentAffairAcademicTopic {
+  currentAffairId String
+  topicId         String
+
+  currentAffair CurrentAffair @relation(fields: [currentAffairId], references: [id], onDelete: Cascade)
+  topic         AcademicTopic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@id([currentAffairId, topicId])
+  @@map("current_affair_academic_topics")
+}
+
+model CurrentAffairTags {
+  currentAffairId String
+  tagId           String
+
+  currentAffair CurrentAffair    @relation(fields: [currentAffairId], references: [id], onDelete: Cascade)
+  tag           CurrentAffairTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([currentAffairId, tagId])
+  @@map("current_affair_tags_map")
+}
+
+model CurrentAffairTrendingTopic {
+  id           String   @id @default(uuid())
+  topicEn      String
+  topicKn      String
+  slug         String   @unique
+  description  String?
+  priority     Int      @default(0)
+  displayOrder Int      @default(0)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("current_affair_trending_topics")
+}
+
+model CurrentAffairPdf {
+  id            String              @id @default(uuid())
+  titleEn       String
+  titleKn       String
+  type          PdfType
+  periodStart   DateTime?
+  periodEnd     DateTime?
+  language      PdfLanguage
+  fileUrl       String
+  fileId        String?
+  status        CurrentAffairStatus @default(DRAFT)
+  publishedAt   DateTime?
+  descriptionEn String?
+  descriptionKn String?
+
+  createdByAdminId String
+  updatedByAdminId String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("current_affair_pdfs")
+}
+
+enum PdfType {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+enum PdfLanguage {
+  ENGLISH
+  KANNADA
+  BILINGUAL
+}

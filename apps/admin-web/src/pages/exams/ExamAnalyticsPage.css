@@ -1,0 +1,19 @@
+.exam-analytics-page {
+  font-family: inherit;
+}
+
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.table-responsive table th,
+.table-responsive table td {
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .exam-analytics-page {
+    padding: 12px !important;
+  }
+}
