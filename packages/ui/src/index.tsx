@@ -1,4 +1,5 @@
 import React from 'react';
+import ReactDOM from 'react-dom';
 import { colors, radius, shadows, typography } from '@study-karnataka/config';
 
 /* -------------------------------------------------------------------------- */
@@ -790,16 +791,46 @@ export interface DropdownMenuProps {
 export const DropdownMenu: React.FC<DropdownMenuProps> = ({ trigger, items }) => {
   const [open, setOpen] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
+  const menuRef = React.useRef<HTMLDivElement>(null);
+  const [coords, setCoords] = React.useState({ top: 0, left: 0, right: 0, bottom: 0, isRight: true, isUp: false });
 
   React.useEffect(() => {
     if (!open) return;
     const handleOutsideClick = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false);
+      if (containerRef.current && containerRef.current.contains(e.target as Node)) return;
+      if (menuRef.current && menuRef.current.contains(e.target as Node)) return;
+      setOpen(false);
+    };
+
+    const updatePosition = () => {
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        const spaceOnRight = window.innerWidth - rect.right;
+        const isRightAligned = spaceOnRight < 120;
+        const estimatedHeight = items.length * 36 + 16;
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const isUp = spaceBelow < estimatedHeight && rect.top > estimatedHeight;
+
+        setCoords({
+          top: rect.bottom + 4,
+          bottom: window.innerHeight - rect.top + 4,
+          left: rect.left,
+          right: window.innerWidth - rect.right,
+          isRight: isRightAligned,
+          isUp,
+        });
       }
     };
+
+    updatePosition();
     document.addEventListener('mousedown', handleOutsideClick);
-    return () => document.removeEventListener('mousedown', handleOutsideClick);
+    window.addEventListener('scroll', updatePosition, true);
+    window.addEventListener('resize', updatePosition);
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      window.removeEventListener('scroll', updatePosition, true);
+      window.removeEventListener('resize', updatePosition);
+    };
   }, [open]);
 
   return (
@@ -807,26 +838,27 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({ trigger, items }) =>
       <div onClick={() => setOpen(!open)} style={{ cursor: 'pointer' }}>
         {trigger}
       </div>
-      {open && (
+      {open && typeof document !== 'undefined' && ReactDOM.createPortal(
         <div
+          ref={menuRef}
           style={{
-            position: 'absolute',
-            right: 0,
-            top: '100%',
-            marginTop: '4px',
+            position: 'fixed',
+            ...(coords.isRight ? { right: coords.right } : { left: coords.left }),
+            ...(coords.isUp ? { bottom: coords.bottom } : { top: coords.top }),
             backgroundColor: '#FFFFFF',
             borderRadius: radius.control,
             border: `1px solid ${colors.border}`,
             boxShadow: shadows.card,
-            minWidth: '160px',
-            zIndex: 80,
+            minWidth: '120px',
+            zIndex: 9999,
             padding: '4px 0',
           }}
         >
           {items.map((item, idx) => (
             <button
               key={idx}
-              onClick={() => {
+              onClick={(e) => {
+                e.stopPropagation();
                 item.onClick();
                 setOpen(false);
               }}
@@ -844,7 +876,8 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({ trigger, items }) =>
               {item.label}
             </button>
           ))}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

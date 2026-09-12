@@ -14,7 +14,7 @@ export const StudentFormPage: React.FC = () => {
   const { studentId } = useParams<{ studentId: string }>();
   const navigate = useNavigate();
   const isEdit = Boolean(studentId);
-  const { addStudent, getStudent, updateStudent } = useStudents();
+  const { addStudent, getStudent, updateStudent, students } = useStudents();
 
   const [formData, setFormData] = useState({
     name: '',
@@ -24,6 +24,10 @@ export const StudentFormPage: React.FC = () => {
     plan: '',
     language: 'english',
     status: 'ACTIVE',
+    joinDate: '',
+    progress: 0,
+    accuracy: 0,
+    lastActive: '',
   });
 
   useEffect(() => {
@@ -38,12 +42,16 @@ export const StudentFormPage: React.FC = () => {
           plan: student.plan,
           language: student.language || 'english',
           status: student.status,
+          joinDate: student.joinDate || '',
+          progress: student.progress || 0,
+          accuracy: student.accuracy || 0,
+          lastActive: student.lastActive || '',
         });
       }
     }
-  }, [isEdit, studentId]);
+  }, [isEdit, studentId, students]);
 
-  const handleChange = (field: string, value: string) => {
+  const handleChange = (field: string, value: string | number) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -145,6 +153,42 @@ export const StudentFormPage: React.FC = () => {
                 { label: 'Inactive', value: 'INACTIVE' },
                 { label: 'Suspended', value: 'SUSPENDED' },
               ]}
+            />
+          </FormField>
+
+          <FormField label="Join Date">
+            <Input 
+              type="text" 
+              placeholder="e.g., 25 Aug 2026" 
+              value={formData.joinDate}
+              onChange={(e) => handleChange('joinDate', e.target.value)}
+            />
+          </FormField>
+          
+          <FormField label="Progress (%)">
+            <Input 
+              type="number" 
+              placeholder="0 - 100" 
+              value={formData.progress.toString()}
+              onChange={(e) => handleChange('progress', parseInt(e.target.value) || 0)}
+            />
+          </FormField>
+
+          <FormField label="Accuracy (%)">
+            <Input 
+              type="number" 
+              placeholder="0 - 100" 
+              value={formData.accuracy.toString()}
+              onChange={(e) => handleChange('accuracy', parseInt(e.target.value) || 0)}
+            />
+          </FormField>
+
+          <FormField label="Last Active">
+            <Input 
+              type="text" 
+              placeholder="e.g., 12/09/2026, 10:30:00" 
+              value={formData.lastActive}
+              onChange={(e) => handleChange('lastActive', e.target.value)}
             />
           </FormField>
 
