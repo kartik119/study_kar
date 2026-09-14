@@ -14,6 +14,7 @@ import {
   IconButton
 } from '@study-karnataka/ui';
 import { useStudents } from '../../hooks/useStudents';
+import { fetchAuthorities } from '../../services/examApi';
 
 export const StudentsListPage: React.FC = () => {
   const navigate = useNavigate();
@@ -22,6 +23,12 @@ export const StudentsListPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState('');
+  
+  const [authorities, setAuthorities] = useState<any[]>([]);
+
+  React.useEffect(() => {
+    fetchAuthorities().then(setAuthorities).catch(console.error);
+  }, []);
   
   const [examFilter, setExamFilter] = useState('all');
   const [planFilter, setPlanFilter] = useState('all');
@@ -199,11 +206,7 @@ export const StudentsListPage: React.FC = () => {
               onChange={(e) => { setExamFilter(e.target.value); setCurrentPage(1); }}
               options={[
                 { label: 'All Exams', value: 'all' },
-                { label: 'KPSC', value: 'kpsc' },
-                { label: 'UPSC', value: 'upsc' },
-                { label: 'PSI', value: 'psi' },
-                { label: 'FDA', value: 'fda' },
-                { label: 'PDO', value: 'pdo' },
+                ...authorities.map(a => ({ label: a.nameEn, value: a.code.toLowerCase() }))
               ]} 
             />
           </div>

@@ -12,7 +12,7 @@ import {
 } from '@study-karnataka/ui';
 import { currentAffairsApi } from '../../services/currentAffairsApi';
 import { TiptapEditor } from '../../components/editor/TiptapEditor';
-import { Globe, Columns, Search, Plus, X, Trash2 } from 'lucide-react';
+import { Globe, Columns, Search, Plus, X, Trash2, Eye } from 'lucide-react';
 
 export const AddCurrentAffairPage: React.FC = () => {
   const navigate = useNavigate();
@@ -29,6 +29,9 @@ export const AddCurrentAffairPage: React.FC = () => {
   const [showAddSourceModal, setShowAddSourceModal] = useState<false | 'en' | 'kn'>(false);
   const [newSourceName, setNewSourceName] = useState('');
   const [addingSource, setAddingSource] = useState(false);
+
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [previewLang, setPreviewLang] = useState<'en' | 'kn' | 'split'>('en');
 
   // Responsive Breakpoint Hook
   const [windowWidth, setWindowWidth] = useState(
@@ -142,8 +145,23 @@ export const AddCurrentAffairPage: React.FC = () => {
         selectedSubjects, 
         selectedTopics, 
         selectedTags, 
+        featuredImageUrlKn,
+        // Exclude relational and metadata properties from the edit load
+        category,
+        source,
+        exams,
+        stages,
+        categoriesMapped,
+        topicsMapped,
+        tags,
+        id: _id,
+        createdAt,
+        updatedAt,
+        deletedAt,
+        createdByAdminId,
+        updatedByAdminId,
         ...payloadData 
-      } = formData;
+      } = formData as any;
 
       const payload = {
         ...payloadData,
@@ -272,6 +290,19 @@ export const AddCurrentAffairPage: React.FC = () => {
             )}
 
             <div style={{ width: '1px', height: '24px', backgroundColor: '#E2E8F0', margin: '0 4px' }} />
+            
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setPreviewLang(activeLangTab);
+                setShowPreviewModal(true);
+              }} 
+              style={{ height: '36px', padding: '0 12px' }} 
+              leftIcon={<Eye size={16} />}
+              title="Preview"
+            >
+              Preview
+            </Button>
             
             <Button variant="outline" onClick={() => navigate('/current-affairs')} style={{ height: '36px' }}>Cancel</Button>
             <Button variant="secondary" onClick={() => handleSave('DRAFT')} disabled={saving} style={{ height: '36px' }}>Save as Draft</Button>
@@ -730,6 +761,58 @@ export const AddCurrentAffairPage: React.FC = () => {
                 <Button onClick={handleAddSource} disabled={addingSource || !newSourceName}>
                   {addingSource ? 'Adding...' : 'Add Source'}
                 </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Preview Modal */}
+        {showPreviewModal && (
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
+            <div style={{ backgroundColor: '#fff', borderRadius: '12px', width: previewLang === 'split' ? '1200px' : '800px', maxWidth: '95%', maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)', transition: 'width 0.3s ease' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid #E2E8F0' }}>
+                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 600 }}>Preview Content</h3>
+                
+                <div style={{ display: 'flex', backgroundColor: '#F1F5F9', padding: '4px', borderRadius: '8px', gap: '4px' }}>
+                  <button onClick={() => setPreviewLang('en')} style={{ padding: '6px 12px', fontSize: '13px', borderRadius: '6px', border: 'none', cursor: 'pointer', backgroundColor: previewLang === 'en' ? '#fff' : 'transparent', fontWeight: previewLang === 'en' ? 600 : 500, boxShadow: previewLang === 'en' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', color: '#1E293B', transition: 'all 0.15s ease' }}>English</button>
+                  <button onClick={() => setPreviewLang('kn')} style={{ padding: '6px 12px', fontSize: '13px', borderRadius: '6px', border: 'none', cursor: 'pointer', backgroundColor: previewLang === 'kn' ? '#fff' : 'transparent', fontWeight: previewLang === 'kn' ? 600 : 500, boxShadow: previewLang === 'kn' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', color: '#1E293B', transition: 'all 0.15s ease' }}>Kannada</button>
+                  <button onClick={() => setPreviewLang('split')} style={{ padding: '6px 12px', fontSize: '13px', borderRadius: '6px', border: 'none', cursor: 'pointer', backgroundColor: previewLang === 'split' ? '#fff' : 'transparent', fontWeight: previewLang === 'split' ? 600 : 500, boxShadow: previewLang === 'split' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', color: '#1E293B', transition: 'all 0.15s ease' }}>Bilingual</button>
+                </div>
+
+                <button onClick={() => setShowPreviewModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
+                  <X size={18} color="#64748B" />
+                </button>
+              </div>
+              <div style={{ padding: '20px', overflowY: 'auto', flex: 1 }}>
+                {previewLang === 'split' ? (
+                  <div style={{ display: 'flex', gap: '24px' }}>
+                    <div style={{ flex: 1, minWidth: 0, paddingRight: '12px', borderRight: '1px solid #E2E8F0' }}>
+                      <h1 style={{ fontSize: '24px', marginBottom: '16px' }}>{formData.titleEn || 'Untitled English Article'}</h1>
+                      {formData.featuredImageUrl && <img src={formData.featuredImageUrl} alt="Featured" style={{ maxWidth: '100%', borderRadius: '8px', marginBottom: '20px' }} />}
+                      <div style={{ lineHeight: 1.6 }} dangerouslySetInnerHTML={{ __html: formData.contentEn || '<p>No content provided yet.</p>' }} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0, paddingLeft: '12px' }}>
+                      <h1 style={{ fontFamily: "'Noto Sans Kannada', sans-serif", fontSize: '24px', marginBottom: '16px' }}>{formData.titleKn || 'Untitled Kannada Article'}</h1>
+                      {formData.featuredImageUrlKn && <img src={formData.featuredImageUrlKn} alt="Featured" style={{ maxWidth: '100%', borderRadius: '8px', marginBottom: '20px' }} />}
+                      <div style={{ fontFamily: "'Noto Sans Kannada', sans-serif", lineHeight: 1.6 }} dangerouslySetInnerHTML={{ __html: formData.contentKn || '<p>No content provided yet.</p>' }} />
+                    </div>
+                  </div>
+                ) : previewLang === 'kn' ? (
+                  <div>
+                    <h1 style={{ fontFamily: "'Noto Sans Kannada', sans-serif", fontSize: '24px', marginBottom: '16px' }}>{formData.titleKn || 'Untitled Kannada Article'}</h1>
+                    {formData.featuredImageUrlKn && <img src={formData.featuredImageUrlKn} alt="Featured" style={{ maxWidth: '100%', borderRadius: '8px', marginBottom: '20px' }} />}
+                    <div style={{ fontFamily: "'Noto Sans Kannada', sans-serif", lineHeight: 1.6 }} dangerouslySetInnerHTML={{ __html: formData.contentKn || '<p>No content provided yet.</p>' }} />
+                  </div>
+                ) : (
+                  <div>
+                    <h1 style={{ fontSize: '24px', marginBottom: '16px' }}>{formData.titleEn || 'Untitled English Article'}</h1>
+                    {formData.featuredImageUrl && <img src={formData.featuredImageUrl} alt="Featured" style={{ maxWidth: '100%', borderRadius: '8px', marginBottom: '20px' }} />}
+                    <div style={{ lineHeight: 1.6 }} dangerouslySetInnerHTML={{ __html: formData.contentEn || '<p>No content provided yet.</p>' }} />
+                  </div>
+                )}
+              </div>
+              <div style={{ padding: '16px 20px', backgroundColor: '#F8FAFC', borderTop: '1px solid #E2E8F0', display: 'flex', justifyContent: 'flex-end', borderBottomLeftRadius: '12px', borderBottomRightRadius: '12px' }}>
+                <Button variant="outline" onClick={() => setShowPreviewModal(false)}>Close Preview</Button>
               </div>
             </div>
           </div>

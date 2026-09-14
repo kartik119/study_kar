@@ -9,6 +9,7 @@ import {
   Button
 } from '@study-karnataka/ui';
 import { useStudents } from '../../hooks/useStudents';
+import { fetchAuthorities } from '../../services/examApi';
 
 export const StudentFormPage: React.FC = () => {
   const { studentId } = useParams<{ studentId: string }>();
@@ -29,6 +30,12 @@ export const StudentFormPage: React.FC = () => {
     accuracy: 0,
     lastActive: '',
   });
+
+  const [authorities, setAuthorities] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetchAuthorities().then(setAuthorities).catch(console.error);
+  }, []);
 
   useEffect(() => {
     if (isEdit && studentId) {
@@ -110,11 +117,7 @@ export const StudentFormPage: React.FC = () => {
               onChange={(e) => handleChange('exam', e.target.value)}
               options={[
                 { label: 'Select Exam', value: '' },
-                { label: 'KPSC', value: 'KPSC' },
-                { label: 'UPSC', value: 'UPSC' },
-                { label: 'PSI', value: 'PSI' },
-                { label: 'FDA', value: 'FDA' },
-                { label: 'PDO', value: 'PDO' },
+                ...authorities.map(a => ({ label: a.nameEn, value: a.code }))
               ]}
             />
           </FormField>
