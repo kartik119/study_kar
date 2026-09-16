@@ -29,6 +29,8 @@ import studentPerformanceStudentRoutes from './routes/student-performance.studen
 import studentPerformanceAdminRoutes from './routes/student-performance.admin.routes';
 import contentPublicRoutes from './routes/content.public.routes';
 import { currentAffairsAdminRoutes } from './routes/current-affairs.admin.routes';
+import studyPlansAdminRoutes from './routes/study-plans.admin.routes';
+import studyPlansStudentRoutes from './routes/study-plans.student.routes';
 import { errorHandler } from './middleware/errorHandler';
 import { requestLogger } from './middleware/requestLogger';
 import { sendError } from './utils/response';
@@ -69,6 +71,8 @@ app.use('/api/v1/admin/mcq-library/tests', testCreationAdminRoutes);
 app.use('/api/v1/admin/mcq-library', mcqLibraryAdminRoutes);
 app.use('/api/v1/admin/topic-practice', topicPracticeAdminRoutes);
 app.use('/api/v1/admin/performance', studentPerformanceAdminRoutes);
+app.use('/api/v1/admin/study-plans', studyPlansAdminRoutes);
+app.use('/api/v1/student/study-plans', studyPlansStudentRoutes);
 app.use('/api/v1/student/ranked-tests', rankedTestStudentRoutes);
 app.use('/api/v1/student/topic-practice', topicPracticeStudentRoutes);
 app.use('/api/v1/student', studentPerformanceStudentRoutes);

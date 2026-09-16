@@ -240,11 +240,11 @@ export const ExamSyllabusPage: React.FC = () => {
     return stage?.papers || [];
   }, [selectedStageId, stages]);
 
-  // Reset stage when exam changes
+  // Reset stage when exam changes  // 2. Keep selectedStageId valid or reset it (allow empty for Global)
   useEffect(() => {
     if (stages.length > 0) {
-      if (!selectedStageId || !stages.find(s => s.id === selectedStageId)) {
-        setSelectedStageId(stages[0].id);
+      if (selectedStageId && !stages.find(s => s.id === selectedStageId)) {
+        setSelectedStageId('');
       }
     } else {
       setSelectedStageId('');
@@ -1491,10 +1491,13 @@ export const ExamSyllabusPage: React.FC = () => {
               <div style={{ width: '180px' }}>
                 <select
                   value={selectedStageId}
-                  onChange={(e) => setSelectedStageId(e.target.value)}
+                  onChange={(e) => {
+                    setSelectedStageId(e.target.value);
+                    setSelectedPaperId(''); // Reset paper when stage changes
+                  }}
                   style={{ width: '100%', height: '36px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '13px', fontFamily: 'inherit', color: '#0f172a', backgroundColor: '#ffffff', outline: 'none', cursor: 'pointer' }}
                 >
-                  <option value="" disabled>Select Stage...</option>
+                  <option value="">All Stages (Global View)</option>
                   {stages.map(s => (
                     <option key={s.id} value={s.id}>{s.nameEn}</option>
                   ))}
@@ -1508,7 +1511,7 @@ export const ExamSyllabusPage: React.FC = () => {
                   style={{ width: '100%', height: '36px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '13px', fontFamily: 'inherit', color: '#0f172a', backgroundColor: '#ffffff', outline: 'none', cursor: 'pointer' }}
                   disabled={!selectedStageId}
                 >
-                  <option value="" disabled>Select Paper...</option>
+                  <option value="">All Papers</option>
                   {papers.map(p => (
                     <option key={p.id} value={p.id}>{p.nameEn}</option>
                   ))}

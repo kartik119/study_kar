@@ -135,6 +135,9 @@ importers:
       csv-parse:
         specifier: ^7.0.2
         version: 7.0.2
+      date-fns:
+        specifier: ^4.4.0
+        version: 4.4.0
       dotenv:
         specifier: ^16.4.7
         version: 16.6.1
@@ -2880,6 +2883,9 @@ packages:
 
   csv-parse@7.0.2:
     resolution: {integrity: sha512-uKZghv9UmPkMVLYy//KZ9HFAIJsl7wkhoEdIL0+rhuSY9pZQlhaeGEDPIe+/w7eh81MOql8Q/9+inAGWG6ZHYA==}
+
+  date-fns@4.4.0:
+    resolution: {integrity: sha512-+1UMbeh68lH1SegH83CGWwpb6OHHbpSgr3+s5Eww5M4CAgswBpoWS0AjTOfEJ33HiYKz1hdj/KTFprzXHmq/6w==}
 
   dayjs@1.11.21:
     resolution: {integrity: sha512-98IT+HOahAisibz/yjKbzuOBwYcjJ7BCLPzARyHiyEBmRz4fatF+KPJszEHXsGYjUG234aH/cOjW1wwTbKUZlA==}
@@ -8389,6 +8395,8 @@ snapshots:
   csstype@3.2.3: {}
 
   csv-parse@7.0.2: {}
+
+  date-fns@4.4.0: {}
 
   dayjs@1.11.21: {}
 

@@ -472,13 +472,27 @@ router.get(
           importantDates: { orderBy: { displayOrder: 'asc' } },
           officialResources: { orderBy: { displayOrder: 'asc' } },
           seo: true,
+          syllabi: {
+            where: { isCurrent: true },
+            select: {
+              _count: {
+                select: {
+                  nodes: { where: { nodeType: { in: ['SUBJECT', 'TOPIC'] }, isActive: true } }
+                }
+              }
+            }
+          }
         },
       });
 
-      const enriched = cycles.map((c) => ({
-        ...c,
-        readiness: calculateExamReadiness(c),
-      }));
+      const enriched = cycles.map((c) => {
+        const topicCount = c.syllabi?.[0]?._count?.nodes || 0;
+        return {
+          ...c,
+          topicCount,
+          readiness: calculateExamReadiness(c),
+        };
+      });
 
       res.status(200).json(sendSuccess(enriched));
     } catch (err: any) {

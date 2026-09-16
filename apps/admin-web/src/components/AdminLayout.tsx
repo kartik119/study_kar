@@ -76,6 +76,14 @@ export const CURRENT_AFFAIRS_SUBMENU = [
   { name: 'Monthly Archive', path: '/current-affairs/monthly-archive', icon: CalendarCheck, permission: 'current_affairs.view' as PermissionKey },
 ];
 
+export const STUDY_PLANS_SUBMENU = [
+  { name: 'Overview', path: '/study-plans', icon: LayoutDashboard, permission: 'study_plans.view' as PermissionKey },
+  { name: 'Planner Rules', path: '/study-plans/rules', icon: Settings, permission: 'study_plans.manage' as PermissionKey },
+  { name: 'Plan Templates', path: '/study-plans/templates', icon: Layers, permission: 'study_plans.manage' as PermissionKey },
+  { name: 'Assigned Plans', path: '/study-plans/assigned', icon: Users, permission: 'study_plans.view' as PermissionKey },
+  { name: 'Completion Tracking', path: '/study-plans/tracking', icon: CalendarCheck, permission: 'study_plans.view' as PermissionKey },
+];
+
 export const ALL_ADMIN_MENU_ITEMS: MenuItem[] = [
   { name: 'Dashboard', path: '/', icon: LayoutDashboard, permission: 'dashboard.view' },
   {
@@ -99,7 +107,13 @@ export const ALL_ADMIN_MENU_ITEMS: MenuItem[] = [
     permission: 'mcq_tests.view',
     subItems: MCQ_SUBMENU,
   },
-  { name: 'Study Plans', path: '/study-plans', icon: CalendarCheck, permission: 'study_plans.view' },
+  { 
+    name: 'Study Plans', 
+    path: '/study-plans', 
+    icon: CalendarCheck, 
+    permission: 'study_plans.view',
+    subItems: STUDY_PLANS_SUBMENU
+  },
   { name: 'Students', path: '/students', icon: Users, permission: 'students.view' },
   { 
     name: 'Current Affairs', 
@@ -123,6 +137,7 @@ export const AdminLayout: React.FC = () => {
   const [manualExamsOpen, setManualExamsOpen] = useState<boolean | null>(null);
   const [manualStudyMaterialsOpen, setManualStudyMaterialsOpen] = useState<boolean | null>(null);
   const [manualMcqOpen, setManualMcqOpen] = useState<boolean | null>(null);
+  const [manualStudyPlansOpen, setManualStudyPlansOpen] = useState<boolean | null>(null);
   const [manualCurrentAffairsOpen, setManualCurrentAffairsOpen] = useState<boolean | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
@@ -130,11 +145,13 @@ export const AdminLayout: React.FC = () => {
   const isExamsActive = location.pathname.startsWith('/exams');
   const isStudyMaterialsActive = location.pathname.startsWith('/study-materials');
   const isMcqActive = location.pathname.startsWith('/mcq-library');
+  const isStudyPlansActive = location.pathname.startsWith('/study-plans');
   const isCurrentAffairsActive = location.pathname.startsWith('/current-affairs');
 
   const isExamsOpen = manualExamsOpen !== null ? manualExamsOpen : isExamsActive;
   const isStudyMaterialsOpen = manualStudyMaterialsOpen !== null ? manualStudyMaterialsOpen : isStudyMaterialsActive;
   const isMcqOpen = manualMcqOpen !== null ? manualMcqOpen : isMcqActive;
+  const isStudyPlansOpen = manualStudyPlansOpen !== null ? manualStudyPlansOpen : isStudyPlansActive;
   const isCurrentAffairsOpen = manualCurrentAffairsOpen !== null ? manualCurrentAffairsOpen : isCurrentAffairsActive;
 
   // Load user from localStorage
@@ -214,6 +231,8 @@ export const AdminLayout: React.FC = () => {
                   ? isStudyMaterialsOpen
                   : item.name === 'MCQ Library & Tests'
                   ? isMcqOpen
+                  : item.name === 'Study Plans'
+                  ? isStudyPlansOpen
                   : item.name === 'Current Affairs'
                   ? isCurrentAffairsOpen
                   : true;
@@ -243,6 +262,15 @@ export const AdminLayout: React.FC = () => {
                     setManualStudyMaterialsOpen(false);
                     setManualCurrentAffairsOpen(false);
                   }
+                } else if (item.name === 'Study Plans') {
+                  const nextState = !isStudyPlansOpen;
+                  setManualStudyPlansOpen(nextState);
+                  if (nextState) {
+                    setManualExamsOpen(false);
+                    setManualStudyMaterialsOpen(false);
+                    setManualMcqOpen(false);
+                    setManualCurrentAffairsOpen(false);
+                  }
                 } else if (item.name === 'Current Affairs') {
                   const nextState = !isCurrentAffairsOpen;
                   setManualCurrentAffairsOpen(nextState);
@@ -250,6 +278,7 @@ export const AdminLayout: React.FC = () => {
                     setManualExamsOpen(false);
                     setManualStudyMaterialsOpen(false);
                     setManualMcqOpen(false);
+                    setManualStudyPlansOpen(false);
                   }
                 }
               };

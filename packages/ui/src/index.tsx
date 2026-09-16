@@ -704,9 +704,10 @@ export interface ModalProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
+  maxWidth?: string;
 }
 
-export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
+export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, maxWidth = '500px' }) => {
   if (!isOpen) return null;
   return (
     <div
@@ -717,7 +718,8 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        zIndex: 100,
+        padding: '24px',
+        zIndex: 100
       }}
       onClick={onClose}
     >
@@ -725,20 +727,25 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
         style={{
           backgroundColor: '#FFFFFF',
           borderRadius: radius.panel,
-          padding: '24px',
-          width: '90%',
-          maxWidth: '500px',
+          width: '100%',
+          maxWidth: maxWidth,
           boxShadow: shadows.lg,
+          maxHeight: 'calc(100vh - 48px)',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden'
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+        <div style={{ padding: '24px 24px 16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
           <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 600 }}>{title}</h3>
-          <button onClick={onClose} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '18px' }}>
+          <button onClick={onClose} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '18px', color: '#64748b' }}>
             ✕
           </button>
         </div>
-        {children}
+        <div style={{ padding: '0 24px 24px 24px', overflowY: 'auto', flexGrow: 1 }}>
+          {children}
+        </div>
       </div>
     </div>
   );

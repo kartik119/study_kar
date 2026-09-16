@@ -29,6 +29,8 @@ import { StudentPerformanceDashboardPage } from './pages/performance/StudentPerf
 import { CategoryPerformanceDetailPage } from './pages/performance/CategoryPerformanceDetailPage';
 import { StudentWeakAreasPage } from './pages/performance/StudentWeakAreasPage';
 import { FrequentlyWrongQuestionsPage } from './pages/performance/FrequentlyWrongQuestionsPage';
+import { StudentCreatePlanPage } from './pages/study-plans/StudentCreatePlanPage';
+import { StudentWeeklyPlannerPage } from './pages/study-plans/StudentWeeklyPlannerPage';
 
 // Protected Route Component
 const ProtectedStudentRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -660,6 +662,21 @@ const StudentDashboardPage: React.FC = () => {
               </Button>
             </div>
           </Card>
+
+          {/* Weekly Planner Card */}
+          <Card title="My Weekly Planner" subtitle="Your personalized day-by-day study schedule">
+            <p style={{ fontSize: '14px', color: '#64748B', margin: '0 0 16px 0' }}>
+              View the specific concepts and topics assigned to you for today and the upcoming week.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <Button variant="primary" size="md" onClick={() => navigate('/study-plans/weekly')}>
+                View My Weekly Planner →
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => navigate('/study-plans/create')}>
+                Create New Study Plan
+              </Button>
+            </div>
+          </Card>
         </div>
       </main>
     </div>
@@ -795,6 +812,22 @@ export const App: React.FC = () => (
         element={
           <ProtectedStudentRoute>
             <StudentPerformanceDashboardPage />
+          </ProtectedStudentRoute>
+        }
+      />
+      <Route
+        path="/study-plans/create"
+        element={
+          <ProtectedStudentRoute>
+            <StudentCreatePlanPage />
+          </ProtectedStudentRoute>
+        }
+      />
+      <Route
+        path="/study-plans/weekly"
+        element={
+          <ProtectedStudentRoute>
+            <StudentWeeklyPlannerPage />
           </ProtectedStudentRoute>
         }
       />

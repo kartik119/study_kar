@@ -45,6 +45,12 @@ import {
   NotFoundPage,
 } from './pages/PlaceholderPages';
 import { StudentsListPage } from './pages/students/StudentsListPage';
+import { StudyPlansOverviewPage } from './pages/study-plans/StudyPlansOverviewPage';
+import { PlannerRulesPage } from './pages/study-plans/PlannerRulesPage';
+import { PlanTemplatesPage } from './pages/study-plans/PlanTemplatesPage';
+import { AssignedPlansPage } from './pages/study-plans/AssignedPlansPage';
+import { CreatePlanPage } from './pages/study-plans/CreatePlanPage';
+import { CompletionTrackingPage } from './pages/study-plans/CompletionTrackingPage';
 import { CurrentAffairsListPage } from './pages/current-affairs/CurrentAffairsListPage';
 import { AddCurrentAffairPage } from './pages/current-affairs/AddCurrentAffairPage';
 import { CurrentAffairsDashboardPage } from './pages/current-affairs/CurrentAffairsDashboardPage';
@@ -145,7 +151,14 @@ export const App: React.FC = () => (
         <Route path="mcq-library/ranked-tests/:id" element={<RankedTestDetailPage />} />
         <Route path="mcq-library/topic-practice" element={<AdminTopicPracticeConfigPage />} />
         <Route path="mcq-library/:id/edit" element={<McqFormPage />} />
-        <Route path="study-plans" element={<StudyPlansPage />} />
+        <Route path="study-plans">
+          <Route index element={<StudyPlansOverviewPage />} />
+          <Route path="rules" element={<PlannerRulesPage />} />
+          <Route path="templates" element={<PlanTemplatesPage />} />
+          <Route path="new" element={<CreatePlanPage />} />
+          <Route path="assigned" element={<AssignedPlansPage />} />
+          <Route path="tracking" element={<CompletionTrackingPage />} />
+        </Route>
         <Route path="students" element={<StudentsListPage />} />
         <Route path="students/new" element={<StudentFormPage />} />
         <Route path="students/:studentId/edit" element={<StudentFormPage />} />

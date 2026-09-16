@@ -75,6 +75,7 @@ model User {
   taxonomyPracticeStats StudentTaxonomyPracticeStats[]
   performanceEvents     StudentPerformanceEvent[]
   taxonomyPerformances  StudentTaxonomyPerformance[]
+  studyPlans            StudentStudyPlan[]
 
   @@map("users")
 }
@@ -400,6 +401,8 @@ model ExamCycle {
 
   mockTests                 MockTest[]
   currentAffairs            CurrentAffairExam[]
+  studyPlanTemplates        StudyPlanTemplate[]
+  studyPlans                StudentStudyPlan[]
 
   @@unique([programmeId, cycleCode])
   @@index([status, visibility])
@@ -647,6 +650,7 @@ model ExamStage {
   mockTests                 MockTest[]
   testSeries                TestSeries[]
   currentAffairs            CurrentAffairStage[]
+  studyPlans                StudentStudyPlan[]
 
   @@unique([examPatternId, code])
   @@unique([examPatternId, displayOrder])
@@ -850,6 +854,7 @@ model ExamSyllabusNode {
   examStage    ExamStage?         @relation(fields: [examStageId], references: [id], onDelete: SetNull)
   examPaper    ExamPaper?         @relation(fields: [examPaperId], references: [id], onDelete: SetNull)
   mcqQuestions McqQuestion[]
+  planningMetadata StudyTopicPlanningMetadata?
 
   @@unique([examSyllabusId, code])
   @@index([examSyllabusId])
@@ -859,6 +864,30 @@ model ExamSyllabusNode {
   @@index([examSyllabusId, isActive])
   @@index([examSyllabusId, nodeType])
   @@map("exam_syllabus_nodes")
+}
+
+model StudyTopicPlanningMetadata {
+  id                      String   @id @default(uuid())
+  examId                  String?
+  syllabusNodeId          String   @unique
+  estimatedConceptMinutes Int?
+  weight                  Float?
+  priority                Int?
+  difficulty              String?
+  importance              String?
+  isPrerequisite          Boolean  @default(false)
+  sequenceOverride        Int?
+  minimumSessions         Int?
+  maximumSessions         Int?
+  revisionPriority        Int?
+  isActive                Boolean  @default(true)
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  syllabusNode ExamSyllabusNode @relation(fields: [syllabusNodeId], references: [id], onDelete: Cascade)
+
+  @@index([syllabusNodeId])
+  @@map("study_topic_planning_metadata")
 }
 
 // ==========================================
@@ -2388,4 +2417,226 @@ enum PdfLanguage {
   ENGLISH
   KANNADA
   BILINGUAL
+}
+
+// ==========================================
+// STUDY PLAN MODULE (PHASE 1)
+// ==========================================
+
+enum StudyPlanCoverageStatus {
+  FULL_COVERAGE
+  TIGHT_COVERAGE
+  COMPRESSED_COVERAGE
+}
+
+enum StudyPlanLifecycleStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+  REPLANNED
+}
+
+enum StudyPlanTaskStatus {
+  PLANNED
+  IN_PROGRESS
+  PARTIAL
+  COMPLETED
+  MISSED
+  POSTPONED
+  REPLANNED
+  SUPERSEDED
+  SKIPPED
+  DRAFT
+}
+
+model StudyPlannerRule {
+  id                         String   @id @default(uuid())
+  name                       String
+  description                String?  @db.Text
+  minRemainingDays           Int
+  maxRemainingDays           Int
+  recommendedDailyMinutes    Int
+  conceptMinutes             Int
+  revisionMinutes            Int
+  mcqMinutes                 Int
+  currentAffairsMinutes      Int
+  bufferMinutes              Int      @default(0)
+  conceptTargetMinutes       Int      @default(42000) // Default 700 hours
+  recoveryOverloadPercentage Int      @default(20)
+  allowScaling               Boolean  @default(true)
+  priority                   Int      @default(0)
+  
+  // Phase 3: Academic Allocation Configurations
+  firstPassConceptPercentage Int      @default(50)
+  defaultTopicMinutes        Int      @default(120)
+  minTopicMinutes            Int      @default(60)
+  maxFallbackTopicMinutes    Int      @default(240)
+  maxSameTopicConsecutiveDays Int     @default(3)
+  preferredSessionMinutes    Int      @default(120)
+  revisionInterval1          Int      @default(1)
+  revisionInterval2          Int      @default(3)
+  revisionInterval3          Int      @default(7)
+  subjectRotationStrategy    String   @default("SEQUENTIAL")
+  allowSessionBasedRevision  Boolean  @default(true)
+  allowSessionBasedMcq       Boolean  @default(true)
+  
+  isActive                   Boolean  @default(true)
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
+
+  templates StudyPlanTemplate[]
+  assignedPlans StudentStudyPlan[]
+
+  @@map("study_planner_rules")
+}
+
+model StudyPlanTemplate {
+  id                  String   @id @default(uuid())
+  name                String
+  examCycleId         String?
+  customExamName      String?
+  plannerRuleId       String
+  defaultDailyMinutes Int
+  totalTopics         Int?
+  description         String?  @db.Text
+  isActive            Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  examCycle   ExamCycle?       @relation(fields: [examCycleId], references: [id], onDelete: Cascade)
+  plannerRule StudyPlannerRule @relation(fields: [plannerRuleId], references: [id], onDelete: Cascade)
+  assignedPlans StudentStudyPlan[]
+
+  @@index([examCycleId])
+  @@index([plannerRuleId])
+  @@map("study_plan_templates")
+}
+
+model StudentStudyPlan {
+  id                             String                  @id @default(uuid())
+  studentId                      String
+  examCycleId                    String
+  examStageId                    String?
+  templateId                     String?
+  plannerRuleId                  String
+  planStartDate                  DateTime
+  examDate                       DateTime
+  remainingDaysAtCreation        Int
+  selectedDailyMinutes           Int
+  recommendedDailyMinutes        Int
+  conceptTargetMinutes           Int
+  dailyConceptMinutes            Int
+  dailyRevisionMinutes           Int
+  dailyMcqMinutes                Int
+  dailyCurrentAffairsMinutes     Int
+  dailyBufferMinutes             Int                     @default(0)
+  estimatedConceptCompletionDays Int
+  estimatedConceptCompletionDate DateTime
+  coverageStatus                 StudyPlanCoverageStatus
+  status                         StudyPlanLifecycleStatus @default(ACTIVE)
+  createdAt                      DateTime                @default(now())
+  updatedAt                      DateTime                @updatedAt
+
+  student     User               @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  examCycle   ExamCycle          @relation(fields: [examCycleId], references: [id], onDelete: Cascade)
+  examStage   ExamStage?         @relation(fields: [examStageId], references: [id], onDelete: SetNull)
+  template    StudyPlanTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  plannerRule StudyPlannerRule   @relation(fields: [plannerRuleId], references: [id], onDelete: Restrict)
+
+  days        StudyPlanDay[]
+  tasks       StudyPlanTask[]
+  histories   StudyPlanHistory[]
+
+  @@index([studentId])
+  @@index([examCycleId])
+  @@index([status])
+  @@map("student_study_plans")
+}
+
+// Scaffold for Phase 2
+model StudyPlanDay {
+  id               String           @id @default(uuid())
+  studyPlanId      String
+  date             DateTime
+  dayNumber        Int
+  weekNumber       Int
+  status           StudyPlanTaskStatus @default(DRAFT)
+  plannedMinutes   Int              @default(0)
+  availableMinutesOverride Int?
+  completedMinutes Int              @default(0)
+  backlogMinutes   Int              @default(0)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  studyPlan StudentStudyPlan @relation(fields: [studyPlanId], references: [id], onDelete: Cascade)
+  tasks     StudyPlanTask[]
+
+  @@index([studyPlanId])
+  @@index([date])
+  @@map("study_plan_days")
+}
+
+enum StudyPlanTaskType {
+  CONCEPT
+  REVISION
+  MCQ
+  CURRENT_AFFAIRS
+  RECOVERY
+  TEST
+  BUFFER
+  OTHER
+}
+
+model StudyPlanTask {
+  id               String            @id @default(uuid())
+  studyPlanDayId   String
+  studyPlanId      String
+  taskType         StudyPlanTaskType
+  plannedMinutes   Int
+  completedMinutes Int               @default(0)
+  status           StudyPlanTaskStatus @default(DRAFT)
+  
+  // Relations/References
+  topicId          String?
+  parentSubjectId  String?
+  studyMaterialId  String?
+  mcqTestId        String?
+  
+  sessionNumber    Int?              @default(1)
+  totalSessions    Int?              @default(1)
+  
+  originalConceptTaskId String?    // For revisions to point back
+  
+  isRecovery       Boolean           @default(false)
+  actualCompletionDate DateTime?
+  
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  studyPlanDay StudyPlanDay     @relation(fields: [studyPlanDayId], references: [id], onDelete: Cascade)
+  studyPlan    StudentStudyPlan @relation(fields: [studyPlanId], references: [id], onDelete: Cascade)
+
+  // Weak references for Phase 2 flexibility
+  // topic AcademicTopic? @relation(fields: [topicId], references: [id])
+  // studyMaterial StudyMaterial? @relation(fields: [studyMaterialId], references: [id])
+
+  @@index([studyPlanDayId])
+  @@index([studyPlanId])
+  @@map("study_plan_tasks")
+}
+
+model StudyPlanHistory {
+  id           String           @id @default(uuid())
+  studyPlanId  String
+  action       String
+  description  String?
+  snapshot     Json?
+  createdAt    DateTime         @default(now())
+
+  studyPlan StudentStudyPlan @relation(fields: [studyPlanId], references: [id], onDelete: Cascade)
+
+  @@index([studyPlanId])
+  @@map("study_plan_histories")
 }
