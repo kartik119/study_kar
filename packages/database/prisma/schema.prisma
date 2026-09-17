@@ -349,8 +349,8 @@ model ExamProgramme {
   createdAt                 DateTime @default(now())
   updatedAt                 DateTime @updatedAt
 
-  authority ExamAuthority @relation(fields: [authorityId], references: [id], onDelete: Cascade)
-  cycles    ExamCycle[]
+  authority  ExamAuthority @relation(fields: [authorityId], references: [id], onDelete: Cascade)
+  cycles     ExamCycle[]
   testSeries TestSeries[]
 
   @@map("exam_programmes")
@@ -399,10 +399,10 @@ model ExamCycle {
   syllabi           ExamSyllabus[]
   mcqQuestions      McqQuestion[]
 
-  mockTests                 MockTest[]
-  currentAffairs            CurrentAffairExam[]
-  studyPlanTemplates        StudyPlanTemplate[]
-  studyPlans                StudentStudyPlan[]
+  mockTests          MockTest[]
+  currentAffairs     CurrentAffairExam[]
+  studyPlanTemplates StudyPlanTemplate[]
+  studyPlans         StudentStudyPlan[]
 
   @@unique([programmeId, cycleCode])
   @@index([status, visibility])
@@ -589,6 +589,7 @@ model ExamPattern {
   descriptionKn         String?           @db.Text
   generalInstructionsEn String?           @db.Text
   generalInstructionsKn String?           @db.Text
+  totalStages           Int               @default(0)
   sourceResourceId      String?
   sourceReference       String?
   status                ExamPatternStatus @default(DRAFT)
@@ -621,6 +622,7 @@ model ExamPattern {
 model ExamStage {
   id                      String             @id @default(uuid())
   examPatternId           String
+  examCode                String?            // Denormalized exam programme code (e.g., IAS, KAS)
   code                    String
   stageType               ExamStageType
   nameEn                  String
@@ -643,14 +645,14 @@ model ExamStage {
   createdAt               DateTime           @default(now())
   updatedAt               DateTime           @updatedAt
 
-  examPattern               ExamPattern                @relation(fields: [examPatternId], references: [id], onDelete: Cascade)
-  papers                    ExamPaper[]
-  importantDates            ExamImportantDate[]
-  syllabusNodes             ExamSyllabusNode[]
-  mockTests                 MockTest[]
-  testSeries                TestSeries[]
-  currentAffairs            CurrentAffairStage[]
-  studyPlans                StudentStudyPlan[]
+  examPattern    ExamPattern          @relation(fields: [examPatternId], references: [id], onDelete: Cascade)
+  papers         ExamPaper[]
+  importantDates ExamImportantDate[]
+  syllabusNodes  ExamSyllabusNode[]
+  mockTests      MockTest[]
+  testSeries     TestSeries[]
+  currentAffairs CurrentAffairStage[]
+  studyPlans     StudentStudyPlan[]
 
   @@unique([examPatternId, code])
   @@unique([examPatternId, displayOrder])
@@ -661,6 +663,7 @@ model ExamStage {
 model ExamPaper {
   id                                 String              @id @default(uuid())
   examStageId                        String
+  examCode                           String?             // Denormalized exam programme code
   code                               String
   assessmentMode                     ExamAssessmentMode
   nameEn                             String
@@ -693,11 +696,11 @@ model ExamPaper {
   createdAt                          DateTime            @default(now())
   updatedAt                          DateTime            @updatedAt
 
-  examStage                 ExamStage                  @relation(fields: [examStageId], references: [id], onDelete: Cascade)
-  sections                  ExamPaperSection[]
-  syllabusNodes             ExamSyllabusNode[]
-  mockTests                 MockTest[]
-  testSeries                TestSeries[]
+  examStage     ExamStage          @relation(fields: [examStageId], references: [id], onDelete: Cascade)
+  sections      ExamPaperSection[]
+  syllabusNodes ExamSyllabusNode[]
+  mockTests     MockTest[]
+  testSeries    TestSeries[]
 
   @@unique([examStageId, code])
   @@unique([examStageId, displayOrder])
@@ -826,6 +829,7 @@ model ExamSyllabus {
 model ExamSyllabusNode {
   id              String                @id @default(uuid())
   examSyllabusId  String
+  examCode        String?               // Denormalized exam programme code
   parentId        String?
   code            String
   nodeType        ExamSyllabusNodeType
@@ -848,12 +852,12 @@ model ExamSyllabusNode {
   createdAt       DateTime              @default(now())
   updatedAt       DateTime              @updatedAt
 
-  examSyllabus ExamSyllabus       @relation(fields: [examSyllabusId], references: [id], onDelete: Cascade)
-  parent       ExamSyllabusNode?  @relation("SyllabusNodeHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
-  children     ExamSyllabusNode[] @relation("SyllabusNodeHierarchy")
-  examStage    ExamStage?         @relation(fields: [examStageId], references: [id], onDelete: SetNull)
-  examPaper    ExamPaper?         @relation(fields: [examPaperId], references: [id], onDelete: SetNull)
-  mcqQuestions McqQuestion[]
+  examSyllabus     ExamSyllabus                @relation(fields: [examSyllabusId], references: [id], onDelete: Cascade)
+  parent           ExamSyllabusNode?           @relation("SyllabusNodeHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children         ExamSyllabusNode[]          @relation("SyllabusNodeHierarchy")
+  examStage        ExamStage?                  @relation(fields: [examStageId], references: [id], onDelete: SetNull)
+  examPaper        ExamPaper?                  @relation(fields: [examPaperId], references: [id], onDelete: SetNull)
+  mcqQuestions     McqQuestion[]
   planningMetadata StudyTopicPlanningMetadata?
 
   @@unique([examSyllabusId, code])
@@ -865,6 +869,8 @@ model ExamSyllabusNode {
   @@index([examSyllabusId, nodeType])
   @@map("exam_syllabus_nodes")
 }
+
+
 
 model StudyTopicPlanningMetadata {
   id                      String   @id @default(uuid())
@@ -900,157 +906,158 @@ enum TaxonomyModuleType {
   GENERAL
 }
 
-model AcademicCategory {
-  id               String             @id @default(uuid())
-  moduleType       TaxonomyModuleType @default(GENERAL)
-  code             String
+model StudyMaterialCategory {
+  id               String   @id @default(uuid())
+  code             String   @unique
   nameEn           String
   nameKn           String
-  shortNameEn      String?
-  shortNameKn      String?
-  slugEn           String
-  slugKn           String
-  descriptionEn    String?            @db.Text
-  descriptionKn    String?            @db.Text
-  displayOrder     Int                @default(1)
-  isActive         Boolean            @default(true)
+  descriptionEn    String?
+  descriptionKn    String?
+  iconUrl          String?
+  displayOrder     Int      @default(0)
+  isActive         Boolean  @default(true)
   createdByAdminId String?
   updatedByAdminId String?
-  version          Int                @default(1)
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @updatedAt
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
-  subcategories         AcademicSubcategory[]
-  studyMaterialMappings StudyMaterialTaxonomyMapping[]
-  mcqQuestions          McqQuestion[]
+  subcategories                        StudyMaterialSubcategory[]
+  topics                               StudyMaterialTopic[]
+  studyMaterials                       StudyMaterial[]
+  studyMaterialTaxonomyMappings        StudyMaterialTaxonomyMapping[]
+  testCategoryDistributions            TestCategoryDistribution[]
+  practiceSessions                     PracticeSession[]
+  studentTaxonomyPracticeStats         StudentTaxonomyPracticeStats[]
+  currentAffairStudyMaterialCategories CurrentAffairStudyMaterialCategory[]
 
-  testDistributions     TestCategoryDistribution[]
-  topicPracticeConfigs  TopicPracticeConfig[]
-  practiceSessions      PracticeSession[]
-  taxonomyPracticeStats StudentTaxonomyPracticeStats[]
-  currentAffairs        CurrentAffairAcademicCategory[]
-
-  @@unique([moduleType, code])
-  @@unique([moduleType, slugEn])
-  @@unique([moduleType, slugKn])
-  @@index([code])
-  @@index([moduleType, isActive, displayOrder])
-  @@map("academic_categories")
+  @@map("study_material_categories")
 }
 
-model AcademicSubcategory {
+model StudyMaterialSubcategory {
   id               String   @id @default(uuid())
   categoryId       String
   code             String
   nameEn           String
   nameKn           String
-  shortNameEn      String?
-  shortNameKn      String?
-  slugEn           String
-  slugKn           String
-  descriptionEn    String?  @db.Text
-  descriptionKn    String?  @db.Text
-  displayOrder     Int      @default(1)
+  descriptionEn    String?
+  descriptionKn    String?
+  displayOrder     Int      @default(0)
   isActive         Boolean  @default(true)
   createdByAdminId String?
   updatedByAdminId String?
-  version          Int      @default(1)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  category              AcademicCategory               @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  topics                AcademicTopic[]
-  studyMaterialMappings StudyMaterialTaxonomyMapping[]
-  mcqQuestions          McqQuestion[]
-
-  testDistributions     TestSubcategoryDistribution[]
-  topicPracticeConfigs  TopicPracticeConfig[]
-  practiceSessions      PracticeSession[]
-  taxonomyPracticeStats StudentTaxonomyPracticeStats[]
+  category                      StudyMaterialCategory          @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  topics                        StudyMaterialTopic[]
+  studyMaterialTaxonomyMappings StudyMaterialTaxonomyMapping[]
+  testSubcategoryDistributions  TestSubcategoryDistribution[]
+  practiceSessions              PracticeSession[]
+  studentTaxonomyPracticeStats  StudentTaxonomyPracticeStats[]
 
   @@unique([categoryId, code])
-  @@unique([categoryId, slugEn])
-  @@unique([categoryId, slugKn])
-  @@index([categoryId, displayOrder])
-  @@index([categoryId, isActive])
-  @@map("academic_subcategories")
+  @@map("study_material_subcategories")
 }
 
-model AcademicTopic {
+model StudyMaterialTopic {
   id               String   @id @default(uuid())
   subcategoryId    String
   code             String
   nameEn           String
   nameKn           String
-  shortNameEn      String?
-  shortNameKn      String?
-  slugEn           String
-  slugKn           String
-  descriptionEn    String?  @db.Text
-  descriptionKn    String?  @db.Text
-  displayOrder     Int      @default(1)
+  descriptionEn    String?
+  descriptionKn    String?
+  displayOrder     Int      @default(0)
   isActive         Boolean  @default(true)
   createdByAdminId String?
   updatedByAdminId String?
-  version          Int      @default(1)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  subcategory           AcademicSubcategory            @relation(fields: [subcategoryId], references: [id], onDelete: Cascade)
-  knowledgeAreas        AcademicKnowledgeArea[]
-  studyMaterialMappings StudyMaterialTaxonomyMapping[]
-  mcqQuestions          McqQuestion[]
-
-  topicPracticeConfigs  TopicPracticeConfig[]
-  practiceSessions      PracticeSession[]
-  taxonomyPracticeStats StudentTaxonomyPracticeStats[]
-  currentAffairs        CurrentAffairAcademicTopic[]
+  subcategory                      StudyMaterialSubcategory          @relation(fields: [subcategoryId], references: [id], onDelete: Cascade)
+  studyMaterialCategory            StudyMaterialCategory?            @relation(fields: [studyMaterialCategoryId], references: [id])
+  studyMaterialCategoryId          String?
+  studyMaterialTaxonomyMappings    StudyMaterialTaxonomyMapping[]
+  practiceSessions                 PracticeSession[]
+  studentTaxonomyPracticeStats     StudentTaxonomyPracticeStats[]
+  currentAffairStudyMaterialTopics CurrentAffairStudyMaterialTopic[]
 
   @@unique([subcategoryId, code])
-  @@unique([subcategoryId, slugEn])
-  @@unique([subcategoryId, slugKn])
-  @@index([subcategoryId, displayOrder])
-  @@index([subcategoryId, isActive])
-  @@map("academic_topics")
+  @@map("study_material_topics")
 }
 
-model AcademicKnowledgeArea {
+model McqCategory {
   id               String   @id @default(uuid())
-  topicId          String
+  code             String   @unique
+  nameEn           String
+  nameKn           String
+  descriptionEn    String?
+  descriptionKn    String?
+  iconUrl          String?
+  displayOrder     Int      @default(0)
+  isActive         Boolean  @default(true)
+  createdByAdminId String?
+  updatedByAdminId String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  subcategories        McqSubcategory[]
+  topics               McqTopic[]
+  mcqQuestions         McqQuestion[]
+  topicPracticeConfigs TopicPracticeConfig[]
+
+  @@map("mcq_categories")
+}
+
+model McqSubcategory {
+  id               String   @id @default(uuid())
+  categoryId       String
   code             String
   nameEn           String
   nameKn           String
-  shortNameEn      String?
-  shortNameKn      String?
-  slugEn           String
-  slugKn           String
-  descriptionEn    String?  @db.Text
-  descriptionKn    String?  @db.Text
-  displayOrder     Int      @default(1)
+  descriptionEn    String?
+  descriptionKn    String?
+  displayOrder     Int      @default(0)
   isActive         Boolean  @default(true)
   createdByAdminId String?
   updatedByAdminId String?
-  version          Int      @default(1)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  topic                 AcademicTopic                  @relation(fields: [topicId], references: [id], onDelete: Cascade)
-  studyMaterialMappings StudyMaterialTaxonomyMapping[]
-  mcqQuestions          McqQuestion[]
+  category             McqCategory           @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  topics               McqTopic[]
+  topicPracticeConfigs TopicPracticeConfig[]
+  mcqQuestions         McqQuestion[]
 
-  topicPracticeConfigs  TopicPracticeConfig[]
-  practiceSessions      PracticeSession[]
-  taxonomyPracticeStats StudentTaxonomyPracticeStats[]
-
-  @@unique([topicId, code])
-  @@unique([topicId, slugEn])
-  @@unique([topicId, slugKn])
-  @@index([topicId, displayOrder])
-  @@index([topicId, isActive])
-  @@map("academic_knowledge_areas")
+  @@unique([categoryId, code])
+  @@map("mcq_subcategories")
 }
 
-// ==========================================
+model McqTopic {
+  id               String   @id @default(uuid())
+  subcategoryId    String
+  code             String
+  nameEn           String
+  nameKn           String
+  descriptionEn    String?
+  descriptionKn    String?
+  displayOrder     Int      @default(0)
+  isActive         Boolean  @default(true)
+  createdByAdminId String?
+  updatedByAdminId String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  subcategory          McqSubcategory        @relation(fields: [subcategoryId], references: [id], onDelete: Cascade)
+  mcqCategory          McqCategory?          @relation(fields: [mcqCategoryId], references: [id])
+  mcqCategoryId        String?
+  topicPracticeConfigs TopicPracticeConfig[]
+  mcqQuestions         McqQuestion[]
+
+  @@unique([subcategoryId, code])
+  @@map("mcq_topics")
+}
+
 // PROMPT 07: STUDY MATERIAL FOUNDATION MODELS
 // ==========================================
 
@@ -1105,9 +1112,11 @@ model StudyMaterial {
   createdAt         DateTime                  @default(now())
   updatedAt         DateTime                  @updatedAt
 
-  locales          StudyMaterialLocale[]
-  taxonomyMappings StudyMaterialTaxonomyMapping[]
-  accessPolicy     StudyMaterialAccessPolicy?
+  locales                 StudyMaterialLocale[]
+  taxonomyMappings        StudyMaterialTaxonomyMapping[]
+  accessPolicy            StudyMaterialAccessPolicy?
+  studyMaterialCategory   StudyMaterialCategory?         @relation(fields: [studyMaterialCategoryId], references: [id])
+  studyMaterialCategoryId String?
 
   @@index([code])
   @@index([contentType, recordStatus])
@@ -1282,24 +1291,23 @@ model StudyMaterialTaxonomyMapping {
   categoryId       String
   subcategoryId    String
   topicId          String
-  knowledgeAreaId  String?
+  // knowledgeAreaId removed
   isPrimary        Boolean  @default(false)
   createdByAdminId String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  studyMaterial StudyMaterial          @relation(fields: [studyMaterialId], references: [id], onDelete: Cascade)
-  category      AcademicCategory       @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  subcategory   AcademicSubcategory    @relation(fields: [subcategoryId], references: [id], onDelete: Cascade)
-  topic         AcademicTopic          @relation(fields: [topicId], references: [id], onDelete: Cascade)
-  knowledgeArea AcademicKnowledgeArea? @relation(fields: [knowledgeAreaId], references: [id], onDelete: SetNull)
+  studyMaterial StudyMaterial            @relation(fields: [studyMaterialId], references: [id], onDelete: Cascade)
+  category      StudyMaterialCategory    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  subcategory   StudyMaterialSubcategory @relation(fields: [subcategoryId], references: [id], onDelete: Cascade)
+  topic         StudyMaterialTopic       @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  // knowledgeArea removed temporarily
 
-  @@unique([studyMaterialId, categoryId, subcategoryId, topicId, knowledgeAreaId])
+  @@unique([studyMaterialId, categoryId, subcategoryId, topicId])
   @@index([studyMaterialId])
   @@index([categoryId])
   @@index([subcategoryId])
   @@index([topicId])
-  @@index([knowledgeAreaId])
   @@index([studyMaterialId, isPrimary])
   @@map("study_material_taxonomy_mappings")
 }
@@ -1360,10 +1368,10 @@ model McqQuestion {
   status         McqWorkflowStatus @default(DRAFT)
 
   // Academic Taxonomy Mapping
-  categoryId      String?
-  subcategoryId   String?
-  topicId         String?
-  knowledgeAreaId String?
+  categoryId    String?
+  subcategoryId String?
+  topicId       String?
+  // knowledgeAreaId removed
 
   // Optional Exam & Syllabus Mapping
   examCycleId    String?
@@ -1391,12 +1399,12 @@ model McqQuestion {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
-  examCycle     ExamCycle?             @relation(fields: [examCycleId], references: [id], onDelete: SetNull)
-  syllabusNode  ExamSyllabusNode?      @relation(fields: [syllabusNodeId], references: [id], onDelete: SetNull)
-  category      AcademicCategory?      @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  subcategory   AcademicSubcategory?   @relation(fields: [subcategoryId], references: [id], onDelete: SetNull)
-  topic         AcademicTopic?         @relation(fields: [topicId], references: [id], onDelete: SetNull)
-  knowledgeArea AcademicKnowledgeArea? @relation(fields: [knowledgeAreaId], references: [id], onDelete: SetNull)
+  examCycle    ExamCycle?                @relation(fields: [examCycleId], references: [id], onDelete: SetNull)
+  syllabusNode ExamSyllabusNode?         @relation(fields: [syllabusNodeId], references: [id], onDelete: SetNull)
+  category     McqCategory?              @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  subcategory  McqSubcategory?           @relation(fields: [subcategoryId], references: [id], onDelete: SetNull)
+  topic        McqTopic?                 @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  // knowledgeArea removed temporarily
 
   mockTestQuestions        MockTestQuestion[]
   practiceSessionQuestions PracticeSessionQuestion[]
@@ -1411,7 +1419,6 @@ model McqQuestion {
   @@index([categoryId])
   @@index([subcategoryId])
   @@index([topicId])
-  @@index([knowledgeAreaId])
   @@index([difficulty])
   @@index([status])
   @@index([isPyq])
@@ -1521,8 +1528,8 @@ model TestCategoryDistribution {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  mockTest MockTest         @relation(fields: [mockTestId], references: [id], onDelete: Cascade)
-  category AcademicCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  mockTest MockTest              @relation(fields: [mockTestId], references: [id], onDelete: Cascade)
+  category StudyMaterialCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
   @@unique([mockTestId, categoryId])
   @@index([mockTestId])
@@ -1537,8 +1544,8 @@ model TestSubcategoryDistribution {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  mockTest    MockTest            @relation(fields: [mockTestId], references: [id], onDelete: Cascade)
-  subcategory AcademicSubcategory @relation(fields: [subcategoryId], references: [id], onDelete: Cascade)
+  mockTest    MockTest                 @relation(fields: [mockTestId], references: [id], onDelete: Cascade)
+  subcategory StudyMaterialSubcategory @relation(fields: [subcategoryId], references: [id], onDelete: Cascade)
 
   @@unique([mockTestId, subcategoryId])
   @@index([mockTestId])
@@ -1708,8 +1715,8 @@ model TestSeries {
   updatedAt            DateTime                  @updatedAt
 
   examProgramme ExamProgramme @relation(fields: [examProgrammeId], references: [id], onDelete: Cascade)
-  examStage ExamStage? @relation(fields: [examStageId], references: [id], onDelete: SetNull)
-  examPaper ExamPaper? @relation(fields: [examPaperId], references: [id], onDelete: SetNull)
+  examStage     ExamStage?    @relation(fields: [examStageId], references: [id], onDelete: SetNull)
+  examPaper     ExamPaper?    @relation(fields: [examPaperId], references: [id], onDelete: SetNull)
 
   tests TestSeriesTest[]
 
@@ -1928,7 +1935,7 @@ model TopicPracticeConfig {
   categoryId           String?
   subcategoryId        String?
   topicId              String?
-  knowledgeAreaId      String?
+  // knowledgeAreaId removed
   isEnabled            Boolean                      @default(true)
   accessClassification PracticeAccessClassification @default(FREE)
   maxQuestions         Int                          @default(50)
@@ -1939,15 +1946,14 @@ model TopicPracticeConfig {
   createdAt            DateTime                     @default(now())
   updatedAt            DateTime                     @updatedAt
 
-  category      AcademicCategory?      @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  subcategory   AcademicSubcategory?   @relation(fields: [subcategoryId], references: [id], onDelete: Cascade)
-  topic         AcademicTopic?         @relation(fields: [topicId], references: [id], onDelete: Cascade)
-  knowledgeArea AcademicKnowledgeArea? @relation(fields: [knowledgeAreaId], references: [id], onDelete: Cascade)
+  category    McqCategory?    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  subcategory McqSubcategory? @relation(fields: [subcategoryId], references: [id], onDelete: Cascade)
+  topic       McqTopic?       @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  // knowledgeArea removed
 
   @@index([categoryId])
   @@index([subcategoryId])
   @@index([topicId])
-  @@index([knowledgeAreaId])
   @@map("topic_practice_configs")
 }
 
@@ -1957,7 +1963,7 @@ model PracticeSession {
   categoryId             String
   subcategoryId          String?
   topicId                String?
-  knowledgeAreaId        String?
+  // knowledgeAreaId removed
   selectionMode          PracticeSelectionMode @default(MIXED)
   difficultyFilter       McqDifficulty?
   pyqFilter              String?
@@ -1972,11 +1978,11 @@ model PracticeSession {
   createdAt              DateTime              @default(now())
   updatedAt              DateTime              @updatedAt
 
-  student       User                   @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  category      AcademicCategory       @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  subcategory   AcademicSubcategory?   @relation(fields: [subcategoryId], references: [id], onDelete: SetNull)
-  topic         AcademicTopic?         @relation(fields: [topicId], references: [id], onDelete: SetNull)
-  knowledgeArea AcademicKnowledgeArea? @relation(fields: [knowledgeAreaId], references: [id], onDelete: SetNull)
+  student     User                      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  category    StudyMaterialCategory     @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  subcategory StudyMaterialSubcategory? @relation(fields: [subcategoryId], references: [id], onDelete: SetNull)
+  topic       StudyMaterialTopic?       @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  // knowledgeArea removed temporarily
 
   questions PracticeSessionQuestion[]
 
@@ -2043,7 +2049,7 @@ model StudentTaxonomyPracticeStats {
   categoryId          String
   subcategoryId       String?
   topicId             String?
-  knowledgeAreaId     String?
+  // knowledgeAreaId removed
   totalAttempted      Int       @default(0)
   uniqueQuestionsSeen Int       @default(0)
   totalCorrect        Int       @default(0)
@@ -2053,11 +2059,11 @@ model StudentTaxonomyPracticeStats {
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
 
-  student       User                   @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  category      AcademicCategory       @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  subcategory   AcademicSubcategory?   @relation(fields: [subcategoryId], references: [id], onDelete: SetNull)
-  topic         AcademicTopic?         @relation(fields: [topicId], references: [id], onDelete: SetNull)
-  knowledgeArea AcademicKnowledgeArea? @relation(fields: [knowledgeAreaId], references: [id], onDelete: SetNull)
+  student     User                      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  category    StudyMaterialCategory     @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  subcategory StudyMaterialSubcategory? @relation(fields: [subcategoryId], references: [id], onDelete: SetNull)
+  topic       StudyMaterialTopic?       @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  // knowledgeArea removed temporarily
 
   @@index([studentId])
   @@index([studentId, categoryId])
@@ -2108,10 +2114,10 @@ model StudentPerformanceEvent {
   difficulty McqDifficulty?
   isPyq      Boolean        @default(false)
 
-  categoryId      String
-  subcategoryId   String?
-  topicId         String?
-  knowledgeAreaId String?
+  categoryId    String
+  subcategoryId String?
+  topicId       String?
+  // knowledgeAreaId removed
 
   categoryCodeSnapshot      String?
   categoryNameSnapshot      String?
@@ -2147,10 +2153,10 @@ model StudentTaxonomyPerformance {
   taxonomyLevel    String
   taxonomyEntityId String
 
-  categoryId      String
-  subcategoryId   String?
-  topicId         String?
-  knowledgeAreaId String?
+  categoryId    String
+  subcategoryId String?
+  topicId       String?
+  // knowledgeAreaId removed
 
   totalEvents     Int @default(0)
   answeredEvents  Int @default(0)
@@ -2301,8 +2307,8 @@ model CurrentAffair {
 
   exams            CurrentAffairExam[]
   stages           CurrentAffairStage[]
-  categoriesMapped CurrentAffairAcademicCategory[]
-  topicsMapped     CurrentAffairAcademicTopic[]
+  categoriesMapped CurrentAffairStudyMaterialCategory[]
+  topicsMapped     CurrentAffairStudyMaterialTopic[]
   tags             CurrentAffairTags[]
   mcqQuestions     McqQuestion[]
 
@@ -2336,23 +2342,23 @@ model CurrentAffairStage {
   @@map("current_affair_stages")
 }
 
-model CurrentAffairAcademicCategory {
+model CurrentAffairStudyMaterialCategory {
   currentAffairId String
   categoryId      String
 
-  currentAffair CurrentAffair    @relation(fields: [currentAffairId], references: [id], onDelete: Cascade)
-  category      AcademicCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  currentAffair CurrentAffair         @relation(fields: [currentAffairId], references: [id], onDelete: Cascade)
+  category      StudyMaterialCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
   @@id([currentAffairId, categoryId])
   @@map("current_affair_academic_categories")
 }
 
-model CurrentAffairAcademicTopic {
+model CurrentAffairStudyMaterialTopic {
   currentAffairId String
   topicId         String
 
-  currentAffair CurrentAffair @relation(fields: [currentAffairId], references: [id], onDelete: Cascade)
-  topic         AcademicTopic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  currentAffair CurrentAffair      @relation(fields: [currentAffairId], references: [id], onDelete: Cascade)
+  topic         StudyMaterialTopic @relation(fields: [topicId], references: [id], onDelete: Cascade)
 
   @@id([currentAffairId, topicId])
   @@map("current_affair_academic_topics")
@@ -2452,9 +2458,9 @@ enum StudyPlanTaskStatus {
 }
 
 model StudyPlannerRule {
-  id                         String   @id @default(uuid())
+  id                         String  @id @default(uuid())
   name                       String
-  description                String?  @db.Text
+  description                String? @db.Text
   minRemainingDays           Int
   maxRemainingDays           Int
   recommendedDailyMinutes    Int
@@ -2462,31 +2468,31 @@ model StudyPlannerRule {
   revisionMinutes            Int
   mcqMinutes                 Int
   currentAffairsMinutes      Int
-  bufferMinutes              Int      @default(0)
-  conceptTargetMinutes       Int      @default(42000) // Default 700 hours
-  recoveryOverloadPercentage Int      @default(20)
-  allowScaling               Boolean  @default(true)
-  priority                   Int      @default(0)
-  
-  // Phase 3: Academic Allocation Configurations
-  firstPassConceptPercentage Int      @default(50)
-  defaultTopicMinutes        Int      @default(120)
-  minTopicMinutes            Int      @default(60)
-  maxFallbackTopicMinutes    Int      @default(240)
-  maxSameTopicConsecutiveDays Int     @default(3)
-  preferredSessionMinutes    Int      @default(120)
-  revisionInterval1          Int      @default(1)
-  revisionInterval2          Int      @default(3)
-  revisionInterval3          Int      @default(7)
-  subjectRotationStrategy    String   @default("SEQUENTIAL")
-  allowSessionBasedRevision  Boolean  @default(true)
-  allowSessionBasedMcq       Boolean  @default(true)
-  
-  isActive                   Boolean  @default(true)
-  createdAt                  DateTime @default(now())
-  updatedAt                  DateTime @updatedAt
+  bufferMinutes              Int     @default(0)
+  conceptTargetMinutes       Int     @default(42000) // Default 700 hours
+  recoveryOverloadPercentage Int     @default(20)
+  allowScaling               Boolean @default(true)
+  priority                   Int     @default(0)
 
-  templates StudyPlanTemplate[]
+  // Phase 3: Academic Allocation Configurations
+  firstPassConceptPercentage  Int     @default(50)
+  defaultTopicMinutes         Int     @default(120)
+  minTopicMinutes             Int     @default(60)
+  maxFallbackTopicMinutes     Int     @default(240)
+  maxSameTopicConsecutiveDays Int     @default(3)
+  preferredSessionMinutes     Int     @default(120)
+  revisionInterval1           Int     @default(1)
+  revisionInterval2           Int     @default(3)
+  revisionInterval3           Int     @default(7)
+  subjectRotationStrategy     String  @default("SEQUENTIAL")
+  allowSessionBasedRevision   Boolean @default(true)
+  allowSessionBasedMcq        Boolean @default(true)
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  templates     StudyPlanTemplate[]
   assignedPlans StudentStudyPlan[]
 
   @@map("study_planner_rules")
@@ -2505,8 +2511,8 @@ model StudyPlanTemplate {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
-  examCycle   ExamCycle?       @relation(fields: [examCycleId], references: [id], onDelete: Cascade)
-  plannerRule StudyPlannerRule @relation(fields: [plannerRuleId], references: [id], onDelete: Cascade)
+  examCycle     ExamCycle?         @relation(fields: [examCycleId], references: [id], onDelete: Cascade)
+  plannerRule   StudyPlannerRule   @relation(fields: [plannerRuleId], references: [id], onDelete: Cascade)
   assignedPlans StudentStudyPlan[]
 
   @@index([examCycleId])
@@ -2515,7 +2521,7 @@ model StudyPlanTemplate {
 }
 
 model StudentStudyPlan {
-  id                             String                  @id @default(uuid())
+  id                             String                   @id @default(uuid())
   studentId                      String
   examCycleId                    String
   examStageId                    String?
@@ -2531,13 +2537,13 @@ model StudentStudyPlan {
   dailyRevisionMinutes           Int
   dailyMcqMinutes                Int
   dailyCurrentAffairsMinutes     Int
-  dailyBufferMinutes             Int                     @default(0)
+  dailyBufferMinutes             Int                      @default(0)
   estimatedConceptCompletionDays Int
   estimatedConceptCompletionDate DateTime
   coverageStatus                 StudyPlanCoverageStatus
   status                         StudyPlanLifecycleStatus @default(ACTIVE)
-  createdAt                      DateTime                @default(now())
-  updatedAt                      DateTime                @updatedAt
+  createdAt                      DateTime                 @default(now())
+  updatedAt                      DateTime                 @updatedAt
 
   student     User               @relation(fields: [studentId], references: [id], onDelete: Cascade)
   examCycle   ExamCycle          @relation(fields: [examCycleId], references: [id], onDelete: Cascade)
@@ -2545,9 +2551,9 @@ model StudentStudyPlan {
   template    StudyPlanTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
   plannerRule StudyPlannerRule   @relation(fields: [plannerRuleId], references: [id], onDelete: Restrict)
 
-  days        StudyPlanDay[]
-  tasks       StudyPlanTask[]
-  histories   StudyPlanHistory[]
+  days      StudyPlanDay[]
+  tasks     StudyPlanTask[]
+  histories StudyPlanHistory[]
 
   @@index([studentId])
   @@index([examCycleId])
@@ -2557,18 +2563,18 @@ model StudentStudyPlan {
 
 // Scaffold for Phase 2
 model StudyPlanDay {
-  id               String           @id @default(uuid())
-  studyPlanId      String
-  date             DateTime
-  dayNumber        Int
-  weekNumber       Int
-  status           StudyPlanTaskStatus @default(DRAFT)
-  plannedMinutes   Int              @default(0)
+  id                       String              @id @default(uuid())
+  studyPlanId              String
+  date                     DateTime
+  dayNumber                Int
+  weekNumber               Int
+  status                   StudyPlanTaskStatus @default(DRAFT)
+  plannedMinutes           Int                 @default(0)
   availableMinutesOverride Int?
-  completedMinutes Int              @default(0)
-  backlogMinutes   Int              @default(0)
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
+  completedMinutes         Int                 @default(0)
+  backlogMinutes           Int                 @default(0)
+  createdAt                DateTime            @default(now())
+  updatedAt                DateTime            @updatedAt
 
   studyPlan StudentStudyPlan @relation(fields: [studyPlanId], references: [id], onDelete: Cascade)
   tasks     StudyPlanTask[]
@@ -2590,36 +2596,36 @@ enum StudyPlanTaskType {
 }
 
 model StudyPlanTask {
-  id               String            @id @default(uuid())
+  id               String              @id @default(uuid())
   studyPlanDayId   String
   studyPlanId      String
   taskType         StudyPlanTaskType
   plannedMinutes   Int
-  completedMinutes Int               @default(0)
+  completedMinutes Int                 @default(0)
   status           StudyPlanTaskStatus @default(DRAFT)
-  
+
   // Relations/References
-  topicId          String?
-  parentSubjectId  String?
-  studyMaterialId  String?
-  mcqTestId        String?
-  
-  sessionNumber    Int?              @default(1)
-  totalSessions    Int?              @default(1)
-  
-  originalConceptTaskId String?    // For revisions to point back
-  
-  isRecovery       Boolean           @default(false)
+  topicId         String?
+  parentSubjectId String?
+  studyMaterialId String?
+  mcqTestId       String?
+
+  sessionNumber Int? @default(1)
+  totalSessions Int? @default(1)
+
+  originalConceptTaskId String? // For revisions to point back
+
+  isRecovery           Boolean   @default(false)
   actualCompletionDate DateTime?
-  
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   studyPlanDay StudyPlanDay     @relation(fields: [studyPlanDayId], references: [id], onDelete: Cascade)
   studyPlan    StudentStudyPlan @relation(fields: [studyPlanId], references: [id], onDelete: Cascade)
 
   // Weak references for Phase 2 flexibility
-  // topic AcademicTopic? @relation(fields: [topicId], references: [id])
+  // topic StudyMaterialTopic? @relation(fields: [topicId], references: [id])
   // studyMaterial StudyMaterial? @relation(fields: [studyMaterialId], references: [id])
 
   @@index([studyPlanDayId])
@@ -2628,12 +2634,12 @@ model StudyPlanTask {
 }
 
 model StudyPlanHistory {
-  id           String           @id @default(uuid())
-  studyPlanId  String
-  action       String
-  description  String?
-  snapshot     Json?
-  createdAt    DateTime         @default(now())
+  id          String   @id @default(uuid())
+  studyPlanId String
+  action      String
+  description String?
+  snapshot    Json?
+  createdAt   DateTime @default(now())
 
   studyPlan StudentStudyPlan @relation(fields: [studyPlanId], references: [id], onDelete: Cascade)
 

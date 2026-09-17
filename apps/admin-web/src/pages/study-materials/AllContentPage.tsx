@@ -459,7 +459,7 @@ export const AllContentPage: React.FC = () => {
 
   useEffect(() => {
     if (categoryId) {
-      AcademicTaxonomyApi.getSubcategories(categoryId).then(setSubcategories).catch(() => setSubcategories([]));
+      AcademicTaxonomyApi.getSubcategories(categoryId, { moduleType: 'STUDY_MATERIAL' }).then(setSubcategories).catch(() => setSubcategories([]));
     } else {
       setSubcategories([]);
     }

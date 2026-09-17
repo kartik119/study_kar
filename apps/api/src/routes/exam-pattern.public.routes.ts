@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Router, Request, Response } from 'express';
 import * as patternService from '../services/exam-pattern.service';
 

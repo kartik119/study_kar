@@ -94,7 +94,7 @@ export const StudyMaterialDetailPage: React.FC = () => {
 
   useEffect(() => {
     if (mappingCategory) {
-      AcademicTaxonomyApi.getSubcategories(mappingCategory).then(setSubcategories).catch(console.error);
+      AcademicTaxonomyApi.getSubcategories(mappingCategory, { moduleType: 'STUDY_MATERIAL' }).then(setSubcategories).catch(console.error);
     } else setSubcategories([]);
   }, [mappingCategory]);
 

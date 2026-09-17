@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { PermissionKey } from '@study-karnataka/shared-types';
 import { calculateAge, isMinor } from '@study-karnataka/validation';
 

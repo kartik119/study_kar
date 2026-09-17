@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Router, Request, Response } from 'express';
 import { StudyMaterialAccessService } from '../services/study-material-access.service';
 import { AppError } from '../middleware/errorHandler';

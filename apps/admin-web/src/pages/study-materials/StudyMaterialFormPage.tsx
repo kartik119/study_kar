@@ -266,7 +266,7 @@ export const StudyMaterialFormPage: React.FC = () => {
       await Promise.all(
         data.map(async (cat) => {
           try {
-            const subs = await AcademicTaxonomyApi.getSubcategories(cat.id);
+            const subs = await AcademicTaxonomyApi.getSubcategories(cat.id, { moduleType: 'STUDY_MATERIAL' });
             subMap[cat.id] = subs || [];
           } catch {
             subMap[cat.id] = [];
@@ -410,7 +410,7 @@ export const StudyMaterialFormPage: React.FC = () => {
         const subMapping = selectedTaxonomies.find(t => t.categoryId && t.subcategoryId);
         if (subMapping) {
           try {
-            const topics = await AcademicTaxonomyApi.getTopics(subMapping.subcategoryId);
+            const topics = await AcademicTaxonomyApi.getTopics(subMapping.subcategoryId, { moduleType: 'STUDY_MATERIAL' });
             if (topics && topics.length > 0) {
               primaryTaxonomy = {
                 categoryId: subMapping.categoryId,

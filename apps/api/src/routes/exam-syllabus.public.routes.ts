@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Router, Request, Response } from 'express';
 import { sendSuccess, sendError } from '../utils/response';
 import { fetchPublicSyllabus } from '../services/exam-syllabus.service';

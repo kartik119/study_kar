@@ -130,11 +130,12 @@ export const AcademicTaxonomyApi = {
   },
 
   // Subcategories
-  getSubcategories: async (categoryId?: string, filters?: { search?: string; isActive?: boolean }): Promise<AcademicSubcategory[]> => {
+  getSubcategories: async (categoryId?: string, filters?: { search?: string; isActive?: boolean; moduleType?: string }): Promise<AcademicSubcategory[]> => {
     const params = new URLSearchParams();
     if (categoryId) params.append('categoryId', categoryId);
     if (filters?.search) params.append('search', filters.search);
     if (filters?.isActive !== undefined) params.append('isActive', String(filters.isActive));
+    if (filters?.moduleType) params.append('moduleType', filters.moduleType);
 
     const query = params.toString() ? `?${params.toString()}` : '';
     const res: ApiResponse<AcademicSubcategory[]> = await fetchWithAuth(`${API_BASE}/subcategories${query}`);
@@ -189,11 +190,12 @@ export const AcademicTaxonomyApi = {
   },
 
   // Topics
-  getTopics: async (subcategoryId?: string, filters?: { search?: string; isActive?: boolean }): Promise<AcademicTopic[]> => {
+  getTopics: async (subcategoryId?: string, filters?: { search?: string; isActive?: boolean; moduleType?: string }): Promise<AcademicTopic[]> => {
     const params = new URLSearchParams();
     if (subcategoryId) params.append('subcategoryId', subcategoryId);
     if (filters?.search) params.append('search', filters.search);
     if (filters?.isActive !== undefined) params.append('isActive', String(filters.isActive));
+    if (filters?.moduleType) params.append('moduleType', filters.moduleType);
 
     const query = params.toString() ? `?${params.toString()}` : '';
     const res: ApiResponse<AcademicTopic[]> = await fetchWithAuth(`${API_BASE}/topics${query}`);

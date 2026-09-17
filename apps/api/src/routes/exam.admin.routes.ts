@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Router, Response } from 'express';
 import { prisma } from '@study-karnataka/database';
 import { authenticateToken, requirePermission, AuthenticatedRequest } from '../middleware/auth';

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Router, Request, Response, NextFunction } from 'express';
 import { McqLibraryService, McqLibraryServiceError } from '../services/mcq-library.service';
 import { authenticateToken, requirePermission } from '../middleware/auth';

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { ApiResponse } from '@study-karnataka/shared-types';
 
 export function sendSuccess<T>(

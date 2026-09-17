@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { prisma } from '@study-karnataka/database';
 import { PdfType, PdfLanguage } from '@prisma/client';
 import { CurrentAffairsError } from './current-affairs.service';

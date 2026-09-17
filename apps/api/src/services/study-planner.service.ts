@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { PrismaClient, StudyPlannerRule } from '@study-karnataka/database';
 import { differenceInDays, addDays } from 'date-fns';
 

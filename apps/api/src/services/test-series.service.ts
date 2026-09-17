@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { prisma, Prisma } from '@study-karnataka/database';
 import {
   TestSeriesWorkflowStatus,

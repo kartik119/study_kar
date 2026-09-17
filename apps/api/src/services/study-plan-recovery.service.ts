@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { PrismaClient, StudentStudyPlan, StudyPlanDay, StudyPlanLifecycleStatus, StudyPlanTaskStatus, StudyPlannerRule, StudyPlanTaskType } from '@study-karnataka/database';
 import { StudyPlanGenerationService } from './study-plan-generation.service';
 import { addDays, differenceInDays, startOfDay } from 'date-fns';

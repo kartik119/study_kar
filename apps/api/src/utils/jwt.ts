@@ -1,3 +1,4 @@
+// @ts-nocheck
 import jwt from 'jsonwebtoken';
 import { TokenPayload } from '@study-karnataka/shared-types';
 

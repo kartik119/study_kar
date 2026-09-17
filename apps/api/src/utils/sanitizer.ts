@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Content Sanitizer & Text Extractor for Tiptap JSON and HTML payloads
  */

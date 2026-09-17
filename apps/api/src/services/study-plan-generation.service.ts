@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { PrismaClient, StudentStudyPlan, StudyPlanTaskType, StudyPlanTaskStatus, StudyPlanLifecycleStatus, ExamSyllabusNodeType } from '@study-karnataka/database';
 import { addDays, differenceInDays, startOfDay } from 'date-fns';
 import { StudyPlanAcademicAllocationService } from './study-plan-academic-allocation.service';

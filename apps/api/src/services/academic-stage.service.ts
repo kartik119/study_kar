@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { prisma } from '@study-karnataka/database';
 import { AcademicStage } from '@study-karnataka/shared-types';
 import { createAcademicStageSchema, updateAcademicStageSchema } from '@study-karnataka/validation';

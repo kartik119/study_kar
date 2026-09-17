@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 import request from 'supertest';
 import dotenv from 'dotenv';

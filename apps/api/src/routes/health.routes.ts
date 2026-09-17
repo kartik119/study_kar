@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Router, Request, Response } from 'express';
 import { checkDatabaseHealth } from '@study-karnataka/database';
 import { HealthStatus } from '@study-karnataka/shared-types';

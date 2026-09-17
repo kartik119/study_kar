@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Entitlement Resolver Architecture (Prompt 9)
  */

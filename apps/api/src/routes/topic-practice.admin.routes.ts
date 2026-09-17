@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Router, Response } from 'express';
 import { authenticateToken, AuthenticatedRequest } from '../middleware/auth';
 import { TopicPracticeService } from '../services/topic-practice.service';

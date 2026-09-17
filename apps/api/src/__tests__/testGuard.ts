@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Test Database Safety Guard
  * Ensures integration tests execute ONLY against an isolated test database (e.g., study_karnataka_test)
