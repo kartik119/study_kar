@@ -2506,6 +2506,7 @@ model StudyPlanTemplate {
   plannerRuleId       String
   defaultDailyMinutes Int
   totalTopics         Int?
+  targetExamDate      DateTime?
   description         String?  @db.Text
   isActive            Boolean  @default(true)
   createdAt           DateTime @default(now())

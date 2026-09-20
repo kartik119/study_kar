@@ -126,7 +126,73 @@ router.get('/active/weekly', authenticateToken, async (req: AuthenticatedRequest
   }
 });
 
-// 3. POST /api/v1/student/study-plans (Create a new plan for the student)
+// 3. POST /api/v1/student/study-plans/calculate-preview
+router.post('/calculate-preview', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    if (req.user?.accountType !== 'STUDENT') {
+      res.status(403).json(sendError('FORBIDDEN', 'Student access required'));
+      return;
+    }
+
+    const { 
+      examCycleId, 
+      planStartDate,
+      selectedDailyMinutes
+    } = req.body;
+
+    if (!examCycleId || !planStartDate || !selectedDailyMinutes) {
+      res.status(400).json(sendError('BAD_REQUEST', 'Missing required fields for preview'));
+      return;
+    }
+
+    const start = new Date(planStartDate);
+    const examCycle = await prisma.examCycle.findUnique({
+      where: { id: examCycleId }
+    });
+
+    // Identify Template for the Exam Cycle to get total topics and target date
+    const template = await prisma.studyPlanTemplate.findFirst({
+      where: { 
+        examCycleId: examCycleId,
+        isActive: true
+      }
+    });
+
+    const targetDate = template?.targetExamDate || examCycle?.tentativeExamDate;
+
+    if (!examCycle || !targetDate) {
+      res.status(400).json(sendError('BAD_REQUEST', 'Exam cycle not found or missing exam date'));
+      return;
+    }
+    
+    const exam = new Date(targetDate);
+
+    if (!template) {
+      res.status(400).json(sendError('BAD_REQUEST', 'No active study plan template found for this exam cycle'));
+      return;
+    }
+
+    const rule = await StudyPlannerService.getApplicableRule(start, exam);
+    if (!rule) {
+      res.status(400).json(sendError('BAD_REQUEST', 'No applicable study rule exists for the time remaining until the exam.'));
+      return;
+    }
+
+    const totalTopics = template.totalTopics;
+    const distribution = StudyPlannerService.calculateScaledDistribution(rule, selectedDailyMinutes);
+    const feasibility = StudyPlannerService.calculateFeasibility(start, exam, distribution.conceptMinutes, rule.conceptTargetMinutes, totalTopics || undefined, selectedDailyMinutes, rule.recommendedDailyMinutes);
+    
+    res.json(sendSuccess({
+      rule,
+      distribution,
+      feasibility
+    }));
+  } catch (error: any) {
+    res.status(500).json(sendError('INTERNAL_ERROR', error.message));
+  }
+});
+
+// 4. POST /api/v1/student/study-plans (Create a new plan for the student)
 router.post('/', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     if (req.user?.accountType !== 'STUDENT') {
@@ -136,7 +202,8 @@ router.post('/', authenticateToken, async (req: AuthenticatedRequest, res: Respo
 
     const { 
       examCycleId, 
-      planStartDate 
+      planStartDate,
+      selectedDailyMinutes
     } = req.body;
 
     if (!examCycleId || !planStartDate) {
@@ -149,13 +216,6 @@ router.post('/', authenticateToken, async (req: AuthenticatedRequest, res: Respo
     const examCycle = await prisma.examCycle.findUnique({
       where: { id: examCycleId }
     });
-
-    if (!examCycle || !examCycle.examDate) {
-      res.status(400).json(sendError('BAD_REQUEST', 'Exam cycle not found or missing exam date'));
-      return;
-    }
-    
-    const exam = new Date(examCycle.examDate);
 
     // Identify Template for the Exam Cycle
     const template = await prisma.studyPlanTemplate.findFirst({
@@ -173,15 +233,20 @@ router.post('/', authenticateToken, async (req: AuthenticatedRequest, res: Respo
       return;
     }
 
-    const rule = template.plannerRule;
-    const selectedDailyMinutes = template.defaultDailyMinutes;
+    const rule = await StudyPlannerService.getApplicableRule(start, exam);
+    if (!rule) {
+      res.status(400).json(sendError('BAD_REQUEST', 'No applicable study rule exists for the time remaining until the exam.'));
+      return;
+    }
+
+    const finalSelectedDailyMinutes = selectedDailyMinutes || template.defaultDailyMinutes;
     const totalTopics = template.totalTopics;
 
-    const distribution = StudyPlannerService.calculateScaledDistribution(rule, selectedDailyMinutes);
-    const feasibility = StudyPlannerService.calculateFeasibility(start, exam, distribution.conceptMinutes, rule.conceptTargetMinutes, totalTopics || undefined);
+    const distribution = StudyPlannerService.calculateScaledDistribution(rule, finalSelectedDailyMinutes);
+    const feasibility = StudyPlannerService.calculateFeasibility(start, exam, distribution.conceptMinutes, rule.conceptTargetMinutes, totalTopics || undefined, finalSelectedDailyMinutes, rule.recommendedDailyMinutes);
     
     const adjustedConceptTargetMinutes = totalTopics && totalTopics > 0 
-      ? Math.round((totalTopics / 2000) * rule.conceptTargetMinutes) 
+      ? Math.round((totalTopics / 2000) * rule.conceptTargetMinutes * (finalSelectedDailyMinutes > rule.recommendedDailyMinutes ? finalSelectedDailyMinutes / rule.recommendedDailyMinutes : 1)) 
       : rule.conceptTargetMinutes;
 
     // Create the plan
@@ -193,7 +258,7 @@ router.post('/', authenticateToken, async (req: AuthenticatedRequest, res: Respo
         planStartDate: start,
         examDate: exam,
         remainingDaysAtCreation: feasibility.daysRemaining,
-        selectedDailyMinutes,
+        selectedDailyMinutes: finalSelectedDailyMinutes,
         recommendedDailyMinutes: rule.recommendedDailyMinutes,
         conceptTargetMinutes: adjustedConceptTargetMinutes,
         dailyConceptMinutes: distribution.conceptMinutes,

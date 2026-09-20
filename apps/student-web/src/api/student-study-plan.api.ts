@@ -27,6 +27,7 @@ export const fetchAvailableExams = async () => {
 export const createStudentStudyPlan = async (payload: {
   examCycleId: string;
   planStartDate: string;
+  selectedDailyMinutes?: number;
 }) => {
   const res = await fetch(`${API_URL}/student/study-plans`, {
     method: 'POST',
@@ -35,6 +36,21 @@ export const createStudentStudyPlan = async (payload: {
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error?.message || 'Failed to create plan');
+  return data.data;
+};
+
+export const calculateStudentPlanPreview = async (payload: {
+  examCycleId: string;
+  planStartDate: string;
+  selectedDailyMinutes: number;
+}) => {
+  const res = await fetch(`${API_URL}/student/study-plans/calculate-preview`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify(payload)
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error?.message || 'Failed to calculate preview');
   return data.data;
 };
 

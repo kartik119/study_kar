@@ -20,7 +20,8 @@ export class StudyPlanGenerationService {
             }
           }
         },
-        plannerRule: true
+        plannerRule: true,
+        template: true
       }
     });
 
@@ -87,6 +88,12 @@ export class StudyPlanGenerationService {
 
       for (let i = 0; i < daysToGenerate; i++) {
         const currentDate = addDays(today, i);
+        
+        // Skip Sundays
+        if (currentDate.getDay() === 0) {
+          continue;
+        }
+
         const dayNumber = startingDayOffset + i + 1;
         
         let day = await tx.studyPlanDay.findFirst({

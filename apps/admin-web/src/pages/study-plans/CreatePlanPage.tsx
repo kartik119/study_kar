@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, Button, Input, Select, Badge, Alert } from '@study-karnataka/ui';
 import { Calendar, User, Save, Clock, BookOpen, Layers, CheckCircle } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { calculatePlanPreview, createStudyPlan } from '../../services/studyPlansApi';
+import { calculatePlanPreview, createStudyPlan, fetchStudyPlanTemplates } from '../../services/studyPlansApi';
 import { fetchExams } from '../../services/examApi';
 import { fetchStudents } from '../../services/studentApi';
 
@@ -11,40 +11,58 @@ export const CreatePlanPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const forceRuleId = searchParams.get('ruleId') || undefined;
   
+  const [localTemplateId, setLocalTemplateId] = useState(searchParams.get('templateId') || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Form state
   const [studentId, setStudentId] = useState('');
-  const [examId, setExamId] = useState('');
+  const [examId, setExamId] = useState(searchParams.get('examId') || '');
   const [planStartDate, setPlanStartDate] = useState('');
   const [examDate, setExamDate] = useState('');
-  const [dailyHours, setDailyHours] = useState('4');
-  const [totalTopics, setTotalTopics] = useState('2000');
+  const [dailyHours, setDailyHours] = useState(searchParams.get('dailyHours') || '4');
+  const [totalTopics, setTotalTopics] = useState(searchParams.get('totalTopics') || '2000');
 
   // External data
   const [exams, setExams] = useState<any[]>([]);
   const [students, setStudents] = useState<any[]>([]);
+  const [templates, setTemplates] = useState<any[]>([]);
 
   // Preview state
   const [preview, setPreview] = useState<any>(null);
 
   useEffect(() => {
-    // Load exams and students (simplified for this UI phase)
+    // Load exams, students and templates
     const loadDependencies = async () => {
       try {
-        const [examData, studentData] = await Promise.all([
+        const [examData, studentData, templateData] = await Promise.all([
           fetchExams({}),
-          fetchStudents() // Note: assuming this exists or mocking for now
+          fetchStudents(),
+          fetchStudyPlanTemplates()
         ]);
         setExams(examData);
         setStudents(studentData.data || studentData);
+        setTemplates(templateData || []);
       } catch (err) {
         console.error("Failed to load form dependencies", err);
       }
     };
     loadDependencies();
   }, []);
+
+  const handleTemplateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const tId = e.target.value;
+    setLocalTemplateId(tId);
+    
+    if (tId) {
+      const selectedTpl = templates.find(t => t.id === tId);
+      if (selectedTpl) {
+        if (selectedTpl.examCycleId) setExamId(selectedTpl.examCycleId);
+        if (selectedTpl.totalTopics) setTotalTopics(String(selectedTpl.totalTopics));
+        if (selectedTpl.defaultDailyMinutes) setDailyHours(String(selectedTpl.defaultDailyMinutes / 60));
+      }
+    }
+  };
 
   const handlePreview = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,7 +95,8 @@ export const CreatePlanPage: React.FC = () => {
         examDate,
         selectedDailyMinutes: parseInt(dailyHours) * 60,
         totalTopics: parseInt(totalTopics) || undefined,
-        forceRuleId
+        forceRuleId,
+        templateId: localTemplateId || undefined
       });
       navigate('/study-plans/assigned');
     } catch (err: any) {
@@ -94,7 +113,41 @@ export const CreatePlanPage: React.FC = () => {
       case 'TIGHT_COVERAGE':
         return <div style={{ padding: '12px', backgroundColor: '#FFFBEB', color: '#92400E', borderRadius: '6px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>Syllabus fits tightly within the timeframe.</div>;
       case 'COMPRESSED_COVERAGE':
-        return <div style={{ padding: '12px', backgroundColor: '#FEF2F2', color: '#991B1B', borderRadius: '6px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>Warning: The given timeframe is insufficient for full syllabus coverage at the selected daily hours.</div>;
+        const requiredHours = preview?.feasibility?.requiredDailyMinutes 
+          ? Math.ceil(preview.feasibility.requiredDailyMinutes / 60)
+          : null;
+          
+        return (
+          <div style={{ padding: '16px', backgroundColor: '#FEF2F2', color: '#991B1B', borderRadius: '8px', marginBottom: '16px', display: 'flex', flexDirection: 'column', gap: '12px', border: '1px solid #FCA5A5' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600, fontSize: '15px' }}>
+              Timeframe Insufficient
+            </div>
+            <div style={{ fontSize: '14px', lineHeight: '1.5' }}>
+              Based on the start date and exam date, the student does not have enough time to finish the syllabus at {dailyHours} hours/day. 
+              {requiredHours && (
+                <span style={{ display: 'block', marginTop: '8px', fontWeight: 500 }}>
+                  They must study at least <strong style={{ fontSize: '16px', color: '#DC2626' }}>{requiredHours} hours per day</strong> to complete the syllabus in time.
+                </span>
+              )}
+            </div>
+            {requiredHours && (
+              <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+                <Button type="button" variant="primary" size="sm" onClick={() => {
+                  setDailyHours(String(requiredHours));
+                  alert(`Daily hours updated to ${requiredHours}. Please click 'Calculate & Preview Plan' again.`);
+                }}>
+                  Yes, Update to {requiredHours} hrs/day
+                </Button>
+                <Button type="button" variant="outline" size="sm" onClick={() => {
+                  alert('Please select the next exam cycle from the dropdown.');
+                  setPreview(null);
+                }}>
+                  No, Generate for Next Exam
+                </Button>
+              </div>
+            )}
+          </div>
+        );
       default:
         return null;
     }
@@ -116,6 +169,19 @@ export const CreatePlanPage: React.FC = () => {
           <h2 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '16px' }}>Plan Configuration</h2>
           <form onSubmit={handlePreview} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             
+            <div style={{ padding: '16px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, marginBottom: '8px', color: '#0F172A' }}>Base on Template (Optional)</label>
+              <Select 
+                value={localTemplateId} 
+                onChange={handleTemplateChange}
+                options={[
+                  { label: '-- Custom Plan (No Template) --', value: '' },
+                  ...templates.map(t => ({ label: `${t.name} (Exam: ${t.examCycle?.titleEn || 'N/A'})`, value: t.id }))
+                ]}
+              />
+              <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#64748b' }}>Selecting a template will auto-fill the target exam, topics, and recommended daily hours.</p>
+            </div>
+
             <div>
               <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '8px', color: '#475569' }}>Select Student</label>
               <Select 
@@ -166,6 +232,14 @@ export const CreatePlanPage: React.FC = () => {
                   { label: '6 Hours / Day', value: '6' },
                   { label: '7 Hours / Day', value: '7' },
                   { label: '8 Hours / Day', value: '8' },
+                  { label: '9 Hours / Day', value: '9' },
+                  { label: '10 Hours / Day', value: '10' },
+                  { label: '11 Hours / Day', value: '11' },
+                  { label: '12 Hours / Day', value: '12' },
+                  { label: '13 Hours / Day', value: '13' },
+                  { label: '14 Hours / Day', value: '14' },
+                  { label: '15 Hours / Day', value: '15' },
+                  { label: '16 Hours / Day', value: '16' }
                 ]}
               />
             </div>

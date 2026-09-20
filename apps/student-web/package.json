@@ -15,6 +15,7 @@
     "@study-karnataka/shared-types": "workspace:*",
     "@study-karnataka/ui": "workspace:*",
     "@study-karnataka/validation": "workspace:*",
+    "lucide-react": "^0.475.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.1.5"

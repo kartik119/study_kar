@@ -176,9 +176,6 @@ export const PlannerRulesPage: React.FC = () => {
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '16px' }}>
                 <Button variant="outline" size="sm" onClick={() => handleOpenModal(rule)}>Edit Rule</Button>
-                <Button variant="primary" size="sm" onClick={() => navigate(`/study-plans/new?ruleId=${rule.id}`)}>
-                  <Play size={14} style={{ marginRight: '4px' }} /> Generate Plan
-                </Button>
               </div>
             </Card>
           ))}

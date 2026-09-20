@@ -66,9 +66,72 @@ export const updateStudyPlanTemplate = async (id: string, payload: any) => {
   return data.data;
 };
 
+export const deleteStudyPlanTemplate = async (id: string) => {
+  const response = await fetch(`${API_BASE_URL}/templates/${id}`, { 
+    method: 'DELETE',
+    headers: getHeaders()
+  });
+  const data = await response.json();
+  if (!response.ok || !data.success) throw new Error(data.message || 'Failed to delete template');
+  return data;
+};
+
 export const fetchAssignedPlans = async () => {
   const response = await fetch(`${API_BASE_URL}/assigned`, { headers: getHeaders() });
   if (!response.ok) throw new Error('Failed to fetch assigned plans');
+  const data = await response.json();
+  return data.data;
+};
+
+export const updateAssignedPlan = async (id: string, payload: any) => {
+  const response = await fetch(`${API_BASE_URL}/assigned/${id}`, { 
+    method: 'PUT',
+    headers: getHeaders(),
+    body: JSON.stringify(payload)
+  });
+  const data = await response.json();
+  if (!response.ok || !data.success) throw new Error(data.message || 'Failed to update assigned plan');
+  return data.data;
+};
+
+export const deleteAssignedPlan = async (id: string) => {
+  const response = await fetch(`${API_BASE_URL}/assigned/${id}`, { 
+    method: 'DELETE',
+    headers: getHeaders()
+  });
+  const data = await response.json();
+  if (!response.ok || !data.success) throw new Error(data.message || 'Failed to delete assigned plan');
+  return data;
+};
+
+export const generateInitialPlan = async (planId: string) => {
+  const response = await fetch(`${API_BASE_URL}/${planId}/generate`, { 
+    method: 'POST',
+    headers: getHeaders()
+  });
+  if (!response.ok) throw new Error('Failed to generate plan schedule');
+  const data = await response.json();
+  return data.data;
+};
+
+export const simulateTemplateGeneration = async (payload: {
+  templateId: string;
+  planStartDate: string;
+  selectedDailyMinutes: number;
+}) => {
+  const response = await fetch(`${API_BASE_URL}/simulate`, { 
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify(payload)
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.message || 'Failed to simulate template generation');
+  return data.data;
+};
+
+export const fetchPlanSchedule = async (id: string) => {
+  const response = await fetch(`${API_BASE_URL}/assigned/${id}/schedule`, { headers: getHeaders() });
+  if (!response.ok) throw new Error('Failed to fetch plan schedule');
   const data = await response.json();
   return data.data;
 };

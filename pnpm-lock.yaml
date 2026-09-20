@@ -285,6 +285,9 @@ importers:
       '@study-karnataka/validation':
         specifier: workspace:*
         version: link:../../packages/validation
+      lucide-react:
+        specifier: ^0.475.0
+        version: 0.475.0(react@19.2.8)
       react:
         specifier: ^19.0.0
         version: 19.2.8

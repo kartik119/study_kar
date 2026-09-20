@@ -105,7 +105,9 @@ export class StudyPlannerService {
     examDate: Date,
     scaledConceptMinutes: number,
     conceptTargetMinutes: number,
-    totalTopics?: number
+    totalTopics?: number,
+    selectedDailyMinutes?: number,
+    recommendedDailyMinutes?: number
   ) {
     const daysRemaining = differenceInDays(new Date(examDate), new Date(planStartDate));
     
@@ -114,6 +116,10 @@ export class StudyPlannerService {
     if (totalTopics && totalTopics > 0) {
       adjustedConceptTargetMinutes = Math.round((totalTopics / 2000) * conceptTargetMinutes);
     }
+
+    // Standard mathematically sound scaling: 
+    // If student studies more hours, they cover concepts faster (fewer days).
+    // If they study fewer hours, they cover concepts slower (more days).
 
     // How many days will it take to finish the concept syllabus?
     const estimatedConceptDays = Math.ceil(adjustedConceptTargetMinutes / scaledConceptMinutes);
@@ -133,12 +139,22 @@ export class StudyPlannerService {
       // Just barely finished, margin is tight
       coverageStatus = 'TIGHT_COVERAGE';
     }
+    
+    let requiredDailyMinutes: number | undefined;
+    if (coverageStatus === 'COMPRESSED_COVERAGE' && daysRemaining > 0 && scaledConceptMinutes > 0 && selectedDailyMinutes) {
+      // How many concept minutes would they need per day to exactly finish on time?
+      const requiredScaledConceptMinutes = Math.ceil(adjustedConceptTargetMinutes / daysRemaining);
+      // Since selectedDailyMinutes maps to scaledConceptMinutes, calculate the proportional total
+      const ratio = selectedDailyMinutes / scaledConceptMinutes;
+      requiredDailyMinutes = Math.ceil(requiredScaledConceptMinutes * ratio);
+    }
 
     return {
       estimatedConceptCompletionDays: estimatedConceptDays,
       estimatedConceptCompletionDate: estimatedConceptDate,
       coverageStatus,
-      daysRemaining
+      daysRemaining,
+      requiredDailyMinutes
     };
   }
 }
