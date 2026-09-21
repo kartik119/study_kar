@@ -62,13 +62,16 @@ export const PlanTemplatesPage: React.FC = () => {
   const handleOpenModal = (template?: any) => {
     if (template) {
       setEditingTemplate(template);
+      const linkedExam = exams.find(e => e.id === template.examCycleId);
+      const autoTopicCount = (linkedExam && linkedExam.topicCount > 0) ? linkedExam.topicCount : (template.totalTopics || 2000);
+
       setFormData({
         name: template.name,
         description: template.description || '',
         examCycleId: template.examCycleId,
         plannerRuleId: template.plannerRuleId,
         defaultDailyMinutes: template.defaultDailyMinutes,
-        totalTopics: template.totalTopics || 2000,
+        totalTopics: autoTopicCount,
         targetExamDate: template.targetExamDate ? new Date(template.targetExamDate).toISOString().split('T')[0] : '',
         isActive: template.isActive
       });
@@ -450,7 +453,13 @@ export const PlanTemplatesPage: React.FC = () => {
               value={formData.totalTopics} 
               onChange={(e) => setFormData({...formData, totalTopics: parseInt(e.target.value) || 0})} 
               required 
+              disabled={!!formData.examCycleId}
             />
+            {!!formData.examCycleId && (
+              <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
+                Auto-synced with the live syllabus node count.
+              </div>
+            )}
           </FormField>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>

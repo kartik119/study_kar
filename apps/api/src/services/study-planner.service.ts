@@ -111,50 +111,39 @@ export class StudyPlannerService {
   ) {
     const daysRemaining = differenceInDays(new Date(examDate), new Date(planStartDate));
     
-    // Dynamically adjust the concept target based on topics, assuming baseline is 2000 topics
-    let adjustedConceptTargetMinutes = conceptTargetMinutes;
-    if (totalTopics && totalTopics > 0) {
-      adjustedConceptTargetMinutes = Math.round((totalTopics / 2000) * conceptTargetMinutes);
-    }
-
-    // Standard mathematically sound scaling: 
-    // If student studies more hours, they cover concepts faster (fewer days).
-    // If they study fewer hours, they cover concepts slower (more days).
-
-    // How many days will it take to finish the concept syllabus?
-    const estimatedConceptDays = Math.ceil(adjustedConceptTargetMinutes / scaledConceptMinutes);
-    const estimatedConceptDate = addDays(new Date(planStartDate), estimatedConceptDays);
-
-    let coverageStatus: 'FULL_COVERAGE' | 'TIGHT_COVERAGE' | 'COMPRESSED_COVERAGE' = 'TIGHT_COVERAGE';
-
-    const SAFETY_MARGIN = 15; // Hardcoded safety margin for TIGHT vs FULL
-
-    if (estimatedConceptDays > daysRemaining) {
-      // Won't finish in time
-      coverageStatus = 'COMPRESSED_COVERAGE';
-    } else if (estimatedConceptDays <= daysRemaining - SAFETY_MARGIN) {
-      // Finished with sufficient safety margin
-      coverageStatus = 'FULL_COVERAGE';
-    } else {
-      // Just barely finished, margin is tight
-      coverageStatus = 'TIGHT_COVERAGE';
-    }
+    // 1. Calculate Total Study Days (excluding Sundays approx)
+    const studyDaysRemaining = Math.max(1, Math.floor(daysRemaining * (6 / 7)));
     
-    let requiredDailyMinutes: number | undefined;
-    if (coverageStatus === 'COMPRESSED_COVERAGE' && daysRemaining > 0 && scaledConceptMinutes > 0 && selectedDailyMinutes) {
-      // How many concept minutes would they need per day to exactly finish on time?
-      const requiredScaledConceptMinutes = Math.ceil(adjustedConceptTargetMinutes / daysRemaining);
-      // Since selectedDailyMinutes maps to scaledConceptMinutes, calculate the proportional total
-      const ratio = selectedDailyMinutes / scaledConceptMinutes;
-      requiredDailyMinutes = Math.ceil(requiredScaledConceptMinutes * ratio);
+    // 2. Reserve 30% purely for overall revision
+    const revisionDays = Math.floor(studyDaysRemaining * 0.30);
+    
+    // 3. Concept Learning Days
+    const conceptDays = studyDaysRemaining - revisionDays;
+    
+    // 4. Calculate exact fractional topics per day
+    const topicsCount = totalTopics && totalTopics > 0 ? totalTopics : 1;
+    const topicsPerDay = conceptDays > 0 ? (topicsCount / conceptDays) : topicsCount;
+
+    // Calculate when concepts will finish
+    const estimatedConceptDate = addDays(new Date(planStartDate), Math.ceil(conceptDays * (7/6)));
+
+    // Coverage status can be based on topics per day (e.g. > 3 is compressed)
+    let coverageStatus: 'FULL_COVERAGE' | 'TIGHT_COVERAGE' | 'COMPRESSED_COVERAGE' = 'FULL_COVERAGE';
+    if (topicsPerDay > 3) {
+       coverageStatus = 'COMPRESSED_COVERAGE';
+    } else if (topicsPerDay > 1.5) {
+       coverageStatus = 'TIGHT_COVERAGE';
     }
 
     return {
-      estimatedConceptCompletionDays: estimatedConceptDays,
+      estimatedConceptCompletionDays: conceptDays,
       estimatedConceptCompletionDate: estimatedConceptDate,
       coverageStatus,
       daysRemaining,
-      requiredDailyMinutes
+      requiredDailyMinutes: undefined, // Pacing now automatically guarantees completion
+      topicsPerDay,
+      revisionDays,
+      conceptDays
     };
   }
 }

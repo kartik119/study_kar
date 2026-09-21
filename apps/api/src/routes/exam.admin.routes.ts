@@ -478,7 +478,7 @@ router.get(
             select: {
               _count: {
                 select: {
-                  nodes: { where: { nodeType: { in: ['SUBJECT', 'TOPIC'] }, isActive: true } }
+                  nodes: { where: { isActive: true } }
                 }
               }
             }

@@ -5,6 +5,7 @@ import { authenticateToken, AuthenticatedRequest } from '../middleware/auth';
 import { sendSuccess, sendError } from '../utils/response';
 import { StudyPlannerService } from '../services/study-planner.service';
 import { StudyPlanGenerationService } from '../services/study-plan-generation.service';
+import { differenceInDays } from 'date-fns';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -166,6 +167,12 @@ router.post('/calculate-preview', authenticateToken, async (req: AuthenticatedRe
     }
     
     const exam = new Date(targetDate);
+    
+    const daysUntilExam = differenceInDays(exam, start);
+    if (daysUntilExam < 90) {
+      res.status(400).json(sendError('BAD_REQUEST', 'You must have at least 3 months (90 days) before the exam date to schedule a study plan.'));
+      return;
+    }
 
     if (!template) {
       res.status(400).json(sendError('BAD_REQUEST', 'No active study plan template found for this exam cycle'));
@@ -175,6 +182,11 @@ router.post('/calculate-preview', authenticateToken, async (req: AuthenticatedRe
     const rule = await StudyPlannerService.getApplicableRule(start, exam);
     if (!rule) {
       res.status(400).json(sendError('BAD_REQUEST', 'No applicable study rule exists for the time remaining until the exam.'));
+      return;
+    }
+
+    if (selectedDailyMinutes < rule.recommendedDailyMinutes) {
+      res.status(400).json(sendError('BAD_REQUEST', `The time selected is insufficient. You need to study for at least ${rule.recommendedDailyMinutes / 60} hours per day for this timeline. Otherwise, you will not be eligible for this year's exam. If you can only study for ${selectedDailyMinutes / 60} hours, please target next year's exam.`));
       return;
     }
 
@@ -228,6 +240,20 @@ router.post('/', authenticateToken, async (req: AuthenticatedRequest, res: Respo
       }
     });
 
+    const targetDate = template?.targetExamDate || examCycle?.tentativeExamDate;
+    const exam = targetDate ? new Date(targetDate) : new Date(template?.examCycle?.tentativeExamDate || 0);
+    
+    if (isNaN(exam.getTime())) {
+      res.status(400).json(sendError('BAD_REQUEST', 'Missing or invalid exam date for this cycle.'));
+      return;
+    }
+    
+    const daysUntilExam = differenceInDays(exam, start);
+    if (daysUntilExam < 90) {
+      res.status(400).json(sendError('BAD_REQUEST', 'You must have at least 3 months (90 days) before the exam date to schedule a study plan.'));
+      return;
+    }
+
     if (!template) {
       res.status(400).json(sendError('BAD_REQUEST', 'Study plan configuration is not available for this exam yet. Please contact administration.'));
       return;
@@ -240,6 +266,12 @@ router.post('/', authenticateToken, async (req: AuthenticatedRequest, res: Respo
     }
 
     const finalSelectedDailyMinutes = selectedDailyMinutes || template.defaultDailyMinutes;
+    
+    if (finalSelectedDailyMinutes < rule.recommendedDailyMinutes) {
+      res.status(400).json(sendError('BAD_REQUEST', `The time selected is insufficient. You need to study for at least ${rule.recommendedDailyMinutes / 60} hours per day for this timeline. Otherwise, you will not be eligible for this year's exam. If you can only study for ${finalSelectedDailyMinutes / 60} hours, please target next year's exam.`));
+      return;
+    }
+
     const totalTopics = template.totalTopics;
 
     const distribution = StudyPlannerService.calculateScaledDistribution(rule, finalSelectedDailyMinutes);

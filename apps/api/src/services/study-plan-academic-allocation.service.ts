@@ -33,81 +33,68 @@ export class StudyPlanAcademicAllocationService {
     // 1. Calculate First Pass Budget
     const firstPassBudget = Math.floor(plan.conceptTargetMinutes * (rule.firstPassConceptPercentage / 100));
     
-    // 2. Map topics to their parent subjects
-    const allTopics: { topic: SyllabusNodeWithMetadata; subjectId: string | null }[] = [];
-    const subjects = new Map<string, SyllabusNodeWithMetadata>();
+    // Build in-memory tree to guarantee pre-order (serial-wise) traversal
+    const childrenMap = new Map<string, SyllabusNodeWithMetadata[]>();
+    const rootNodes: SyllabusNodeWithMetadata[] = [];
     
-    // First pass: identify subjects
     for (const node of nodes) {
-      if (node.nodeType === 'SUBJECT') {
-        subjects.set(node.id, node);
+      if (node.parentId) {
+        if (!childrenMap.has(node.parentId)) childrenMap.set(node.parentId, []);
+        childrenMap.get(node.parentId)!.push(node);
+      } else {
+        rootNodes.push(node);
       }
     }
     
-    // Second pass: map topics
-    for (const node of nodes) {
-      if (node.nodeType === 'TOPIC') {
+    // Sort siblings
+    rootNodes.sort((a, b) => a.displayOrder - b.displayOrder);
+    for (const children of childrenMap.values()) {
+      children.sort((a, b) => a.displayOrder - b.displayOrder);
+    }
+    
+    // Pre-order traverse to get flat sorted list
+    const flatSerialNodes: SyllabusNodeWithMetadata[] = [];
+    function traverse(node: SyllabusNodeWithMetadata) {
+      flatSerialNodes.push(node);
+      const children = childrenMap.get(node.id) || [];
+      for (const child of children) {
+        traverse(child);
+      }
+    }
+    for (const root of rootNodes) {
+      traverse(root);
+    }
+    
+    // 2. Map topics to their parent subjects (dynamic leaf node detection)
+    const allTopics: { topic: SyllabusNodeWithMetadata; subjectId: string | null }[] = [];
+    const subjects = new Map<string, SyllabusNodeWithMetadata>();
+    
+    // Identify which nodes act as parents
+    const parentIds = new Set(nodes.map(n => n.parentId).filter(Boolean));
+    
+    for (const node of flatSerialNodes) {
+      if (!parentIds.has(node.id)) {
+        // It's a leaf node -> treat as an allocatable topic
         allTopics.push({
           topic: node,
-          subjectId: node.parentId && subjects.has(node.parentId) ? node.parentId : null
+          subjectId: node.parentId
         });
+      } else {
+        // It acts as a parent
+        subjects.set(node.id, node);
       }
     }
     
     if (allTopics.length === 0) return [];
 
-    // 3. Allocate budget to topics
-    let remainingBudget = firstPassBudget;
-    const estimatedMinutesPerTopic = Math.ceil(firstPassBudget / allTopics.length);
-    
-    const topicAllocations: { topicId: string, subjectId: string | null, allocatedMinutes: number }[] = [];
-    
-    for (const item of allTopics) {
-      let duration = 0;
-      if (item.topic.planningMetadata?.estimatedConceptMinutes) {
-        duration = item.topic.planningMetadata.estimatedConceptMinutes;
-      } else {
-        // Fallback
-        duration = Math.min(
-          Math.max(estimatedMinutesPerTopic, rule.minTopicMinutes),
-          rule.maxFallbackTopicMinutes
-        );
-      }
-      
-      // Safety cap so we don't exceed budget entirely, though first pass is just a target.
-      // If duration exceeds remaining, we can still assign it (it's a target, not a strict wallet),
-      // but let's be reasonable. The user says "The budget is a ceiling/target, not a requirement to artificially stretch".
-      
-      topicAllocations.push({
-        topicId: item.topic.id,
-        subjectId: item.subjectId,
-        allocatedMinutes: duration
-      });
-      
-      remainingBudget -= duration;
-    }
-
-    // 4. Split allocations into Sessions
-    const baseQueue: StudySession[] = [];
-    for (const allocation of topicAllocations) {
-      const preferred = rule.preferredSessionMinutes || 120;
-      const totalSessions = Math.ceil(allocation.allocatedMinutes / preferred);
-      
-      let minsLeft = allocation.allocatedMinutes;
-      for (let s = 1; s <= totalSessions; s++) {
-        const sessionMins = Math.min(minsLeft, preferred);
-        if (sessionMins > 0) {
-          baseQueue.push({
-            topicId: allocation.topicId,
-            parentSubjectId: allocation.subjectId,
-            plannedMinutes: sessionMins,
-            sessionNumber: s,
-            totalSessions: totalSessions
-          });
-        }
-        minsLeft -= sessionMins;
-      }
-    }
+    // Under the day-based algorithm, each topic is a single atomic session assigned to a day.
+    const baseQueue: StudySession[] = allTopics.map(item => ({
+      topicId: item.topic.id,
+      parentSubjectId: item.subjectId,
+      plannedMinutes: 0, // Managed dynamically in generation service based on daily target
+      sessionNumber: 1,
+      totalSessions: 1
+    }));
 
     // 5. Apply Rotation Strategy
     return this.applyRotation(baseQueue, rule);

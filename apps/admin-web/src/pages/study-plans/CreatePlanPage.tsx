@@ -64,6 +64,19 @@ export const CreatePlanPage: React.FC = () => {
     }
   };
 
+  const handleExamChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newExamId = e.target.value;
+    setExamId(newExamId);
+    
+    // Auto-populate topics if we have a template for this exam
+    if (newExamId) {
+      const matchingTemplate = templates.find(t => t.examCycleId === newExamId);
+      if (matchingTemplate && matchingTemplate.totalTopics) {
+        setTotalTopics(String(matchingTemplate.totalTopics));
+      }
+    }
+  };
+
   const handlePreview = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -170,12 +183,13 @@ export const CreatePlanPage: React.FC = () => {
           <form onSubmit={handlePreview} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             
             <div style={{ padding: '16px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, marginBottom: '8px', color: '#0F172A' }}>Base on Template (Optional)</label>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, marginBottom: '8px', color: '#0F172A' }}>Base on Template</label>
               <Select 
                 value={localTemplateId} 
                 onChange={handleTemplateChange}
+                required
                 options={[
-                  { label: '-- Custom Plan (No Template) --', value: '' },
+                  { label: '-- Select Template --', value: '' },
                   ...templates.map(t => ({ label: `${t.name} (Exam: ${t.examCycle?.titleEn || 'N/A'})`, value: t.id }))
                 ]}
               />
@@ -189,7 +203,7 @@ export const CreatePlanPage: React.FC = () => {
                 onChange={e => setStudentId(e.target.value)}
                 options={[
                   { label: '-- Select Student --', value: '' },
-                  ...students.map(s => ({ label: s.fullName || s.email, value: s.id }))
+                  ...students.map(s => ({ label: s.name || s.email, value: s.id }))
                 ]}
                 required
               />
@@ -199,7 +213,7 @@ export const CreatePlanPage: React.FC = () => {
               <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '8px', color: '#475569' }}>Select Exam Cycle</label>
               <Select 
                 value={examId} 
-                onChange={e => setExamId(e.target.value)}
+                onChange={handleExamChange}
                 options={[
                   { label: '-- Select Exam --', value: '' },
                   ...exams.map(e => ({ label: e.titleEn, value: e.id }))
@@ -245,12 +259,13 @@ export const CreatePlanPage: React.FC = () => {
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '8px', color: '#475569' }}>Total Syllabus Topics (Optional)</label>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '8px', color: '#475569' }}>Total Syllabus Topics</label>
               <Input 
                 type="number" 
                 value={totalTopics} 
                 onChange={e => setTotalTopics(e.target.value)} 
                 placeholder="e.g. 2000"
+                required
               />
               <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#64748b' }}>Used to dynamically scale the required concept study time.</p>
             </div>

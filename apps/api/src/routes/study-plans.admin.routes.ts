@@ -3,6 +3,7 @@ import { Router } from 'express';
 import { PrismaClient } from '@study-karnataka/database';
 import { StudyPlannerService } from '../services/study-planner.service';
 import { StudyPlanGenerationService } from '../services/study-plan-generation.service';
+import { differenceInDays } from 'date-fns';
 import { StudyPlanRecoveryService } from '../services/study-plan-recovery.service';
 
 const router = Router();
@@ -179,11 +180,23 @@ router.post('/simulate', async (req: any, res: any) => {
     if (isNaN(exam.getTime())) {
       return res.status(400).json({ success: false, message: 'Missing or invalid exam date for simulation. Please provide an exam date.' });
     }
+    
+    const daysUntilExam = differenceInDays(exam, start);
+    if (daysUntilExam < 90) {
+      return res.status(400).json({ success: false, message: 'You must have at least 3 months (90 days) before the exam date to schedule a study plan.' });
+    }
 
     const rule = await prisma.studyPlannerRule.findUnique({ where: { id: template.plannerRuleId } }) 
       || await StudyPlannerService.getApplicableRule(start, exam);
 
     if (!rule) throw new Error("No applicable rule found");
+
+    if (selectedDailyMinutes < rule.recommendedDailyMinutes) {
+      return res.status(400).json({ 
+        success: false, 
+        message: `The time selected is insufficient. You need to study for at least ${rule.recommendedDailyMinutes / 60} hours per day for this timeline. Otherwise, you will not be eligible for this year's exam. If you can only study for ${selectedDailyMinutes / 60} hours, please target next year's exam.` 
+      });
+    }
 
     const distribution = StudyPlannerService.calculateScaledDistribution(rule, selectedDailyMinutes);
     const totalTopics = template.totalTopics || 0;
@@ -246,10 +259,13 @@ router.post('/simulate', async (req: any, res: any) => {
 
     const topics = await prisma.examSyllabusNode.findMany({
       where: { id: { in: Array.from(topicIds) } },
-      select: { id: true, nameEn: true }
+      select: { id: true, nameEn: true, parent: { select: { nameEn: true } } }
     });
     
-    const topicMap = new Map(topics.map(t => [t.id, t.nameEn]));
+    const topicMap = new Map(topics.map(t => {
+       const fullName = t.parent ? `${t.parent.nameEn}: ${t.nameEn}` : t.nameEn;
+       return [t.id, fullName];
+    }));
 
     const enrichedDays = days.map(day => ({
       ...day,
@@ -265,40 +281,58 @@ router.post('/simulate', async (req: any, res: any) => {
     }));
 
     const totalTopicsCount = template.totalTopics || 0;
+    const conceptDays = (feasibility as any).conceptDays || 1;
     
-    // Calculate how many minutes to assign per topic using the RECOMMENDED baseline.
-    // This ensures that minsPerTopic is fixed, so if the user simulates fewer hours,
-    // they actually cover fewer topics per day. We also exclude Sundays (~1/7th of days).
-    const baselineDistribution = StudyPlannerService.calculateScaledDistribution(rule, rule.recommendedDailyMinutes);
-    const studyDaysRemaining = Math.floor(feasibility.daysRemaining * (6 / 7));
-    const totalBaselineConceptMins = studyDaysRemaining * baselineDistribution.conceptMinutes;
-    const minsPerTopic = totalTopicsCount > 0 ? totalBaselineConceptMins / totalTopicsCount : 0;
-    
-    let runningMins = 0;
     let currentTopicIndex = 1;
+    let currentStudyDayIndex = 0; // 0-indexed concept day tracker
 
-    const finalDays = enrichedDays.map(day => ({
-      ...day,
-      tasks: day.tasks.map(task => {
-        const t = { ...task } as any;
-        if (t.taskType === 'CONCEPT' && totalTopicsCount > 0 && !t.topic) {
-           let previousRunning = runningMins;
-           runningMins += t.plannedMinutes;
-           // Find how many concepts are covered in this session
-           const targetIndex = Math.min(totalTopicsCount, Math.floor(runningMins / minsPerTopic) + 1);
+    const finalDays = enrichedDays.map(day => {
+      const conceptTasks = day.tasks.filter(t => t.taskType === 'CONCEPT');
+      const otherTasks = day.tasks.filter(t => t.taskType !== 'CONCEPT');
+      
+      let mergedConceptTask = null;
+      let topicsCovered: string[] = [];
+      if (conceptTasks.length > 0) {
+        const totalConceptMins = conceptTasks.reduce((sum, t) => sum + t.plannedMinutes, 0);
+        const realTopicNames = conceptTasks.map(t => t.topic?.title).filter(Boolean);
+        
+        topicsCovered = [...realTopicNames];
+        
+        // Fallback for mock concepts if we don't have enough real topics
+        if (topicsCovered.length === 0 && totalTopicsCount > 0) {
+           // Calculate exactly how many topics to cover today using perfectly even mathematical distribution
+           const topicsThisDay = Math.floor((currentStudyDayIndex + 1) * totalTopicsCount / conceptDays) 
+                               - Math.floor(currentStudyDayIndex * totalTopicsCount / conceptDays);
            
-           const topicsCovered = [];
-           while (currentTopicIndex <= targetIndex && currentTopicIndex <= totalTopicsCount) {
+           for (let i = 0; i < topicsThisDay && currentTopicIndex <= totalTopicsCount; i++) {
              topicsCovered.push(`Concept ${currentTopicIndex}`);
              currentTopicIndex++;
            }
-           if (topicsCovered.length > 0) {
-             t.mockTopics = topicsCovered;
-           }
+           currentStudyDayIndex++;
         }
-        return t;
-      })
-    }));
+        
+        mergedConceptTask = {
+           ...conceptTasks[0],
+           plannedMinutes: totalConceptMins,
+           topic: null, // Force UI to use mockTopics dropdown grouping
+           mockTopics: topicsCovered.length > 0 ? topicsCovered : undefined
+        };
+      }
+      
+      const cleanedOtherTasks = otherTasks.map(t => {
+         const tCopy: any = { ...t, topic: null };
+         // Apply the same topics to REVISION and MCQ so the UI dropdown works for them too
+         if ((t.taskType === 'REVISION' || t.taskType === 'MCQ') && topicsCovered.length > 0) {
+            tCopy.mockTopics = topicsCovered;
+         }
+         return tCopy;
+      });
+      
+      return {
+         ...day,
+         tasks: mergedConceptTask ? [mergedConceptTask, ...cleanedOtherTasks] : cleanedOtherTasks
+      };
+    });
 
     // Clean up temporary plan
     await prisma.studentStudyPlan.delete({ where: { id: plan.id } });
@@ -375,6 +409,8 @@ router.post('/', async (req, res) => {
       }
     });
 
+    await StudyPlanGenerationService.generateInitial30DayPlan(plan.id, start);
+
     res.json({ success: true, data: plan });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
@@ -415,16 +451,34 @@ router.get('/assigned/:id/schedule', async (req, res) => {
       },
       include: {
         tasks: {
-          include: {
-            topic: true
-          },
           orderBy: { createdAt: 'asc' }
         }
       },
-      orderBy: { date: 'asc' },
-      take: 7
+      orderBy: { date: 'asc' }
     });
-    res.json({ success: true, data: days });
+
+    const topicIds = new Set<string>();
+    days.forEach(day => {
+      day.tasks.forEach(task => {
+        if (task.topicId) topicIds.add(task.topicId);
+      });
+    });
+
+    const topics = await prisma.examSyllabusNode.findMany({
+      where: { id: { in: Array.from(topicIds) } }
+    });
+    
+    const topicMap = new Map(topics.map(t => [t.id, { nameEn: t.nameEn, nameKn: t.nameKn }]));
+
+    const daysWithTopics = days.map(day => ({
+      ...day,
+      tasks: day.tasks.map(task => ({
+        ...task,
+        topic: task.topicId ? topicMap.get(task.topicId) : null
+      }))
+    }));
+
+    res.json({ success: true, data: daysWithTopics });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -471,6 +525,60 @@ router.delete('/assigned/:id', async (req, res) => {
       where: { id: req.params.id }
     });
     res.json({ success: true, message: 'Plan deleted successfully' });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ==========================================
+// MANUAL TASK EDITING
+// ==========================================
+
+router.put('/assigned/:id/tasks/:taskId', async (req, res) => {
+  try {
+    const { plannedMinutes, topicId } = req.body;
+    
+    const task = await prisma.studyPlanTask.update({
+      where: { id: req.params.taskId, studyPlanId: req.params.id },
+      data: {
+        ...(plannedMinutes !== undefined && { plannedMinutes: Number(plannedMinutes) }),
+        ...(topicId !== undefined && { topicId })
+      }
+    });
+    
+    res.json({ success: true, data: task });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.delete('/assigned/:id/tasks/:taskId', async (req, res) => {
+  try {
+    await prisma.studyPlanTask.delete({
+      where: { id: req.params.taskId, studyPlanId: req.params.id }
+    });
+    res.json({ success: true, message: 'Task deleted successfully' });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.post('/assigned/:id/days/:dayId/tasks', async (req, res) => {
+  try {
+    const { taskType, plannedMinutes, topicId } = req.body;
+    
+    const task = await prisma.studyPlanTask.create({
+      data: {
+        studyPlanId: req.params.id,
+        studyPlanDayId: req.params.dayId,
+        taskType: taskType,
+        plannedMinutes: Number(plannedMinutes),
+        topicId: topicId || null,
+        status: 'PLANNED'
+      }
+    });
+    
+    res.json({ success: true, data: task });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
   }

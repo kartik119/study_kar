@@ -136,6 +136,49 @@ export const fetchPlanSchedule = async (id: string) => {
   return data.data;
 };
 
+export const getStudyPlanRecoveryHistory = async (planId: string) => {
+  const response = await fetch(`${API_BASE_URL}/${planId}/recovery-history`, { headers: getHeaders() });
+  if (!response.ok) throw new Error('Failed to fetch recovery history');
+  const data = await response.json();
+  return data.data;
+};
+
+// ==========================================
+// MANUAL TASK EDITING
+// ==========================================
+
+export const updateStudyPlanTask = async (planId: string, taskId: string, payload: { plannedMinutes?: number, topicId?: string }) => {
+  const response = await fetch(`${API_BASE_URL}/assigned/${planId}/tasks/${taskId}`, { 
+    method: 'PUT',
+    headers: getHeaders(),
+    body: JSON.stringify(payload)
+  });
+  const data = await response.json();
+  if (!response.ok || !data.success) throw new Error(data.message || 'Failed to update task');
+  return data.data;
+};
+
+export const deleteStudyPlanTask = async (planId: string, taskId: string) => {
+  const response = await fetch(`${API_BASE_URL}/assigned/${planId}/tasks/${taskId}`, { 
+    method: 'DELETE',
+    headers: getHeaders()
+  });
+  const data = await response.json();
+  if (!response.ok || !data.success) throw new Error(data.message || 'Failed to delete task');
+  return data;
+};
+
+export const addStudyPlanTask = async (planId: string, dayId: string, payload: { taskType: string, plannedMinutes: number, topicId?: string }) => {
+  const response = await fetch(`${API_BASE_URL}/assigned/${planId}/days/${dayId}/tasks`, { 
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify(payload)
+  });
+  const data = await response.json();
+  if (!response.ok || !data.success) throw new Error(data.message || 'Failed to add task');
+  return data.data;
+};
+
 export const calculatePlanPreview = async (payload: { planStartDate: string, examDate: string, selectedDailyMinutes: number, totalTopics?: number, forceRuleId?: string }) => {
   const response = await fetch(`${API_BASE_URL}/calculate-preview`, { 
     method: 'POST',
