@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
+  ExamAuthority,
+  ExamProgramme,
+  ExamCycle,
   StudyMaterialContentType,
   AcademicCategory,
   AcademicSubcategory,
@@ -23,11 +26,13 @@ import {
 import { StudyMaterialApi } from '../../api/study-materials.api';
 import { AcademicTaxonomyApi } from '../../api/academic-taxonomy.api';
 import { AcademicStageApi } from '../../api/academic-stage.api';
+import { fetchAuthorities, fetchExams, fetchProgrammes } from '../../services/examApi';
 import { TiptapEditor } from '../../components/editor/TiptapEditor';
 import {
   ArrowLeft,
   Save,
   Layers,
+  GraduationCap,
   CheckCircle,
   AlertCircle,
   FileCode,
@@ -221,13 +226,142 @@ export const StudyMaterialFormPage: React.FC = () => {
   };
 
   // Academic Stages Selection State
+  const [authorities, setAuthorities] = useState<ExamAuthority[]>([]);
+  const [programmes, setProgrammes] = useState<ExamProgramme[]>([]);
+  const [exams, setExams] = useState<ExamCycle[]>([]);
+  const [expandedAuthorities, setExpandedAuthorities] = useState<Record<string, boolean>>({});
+  const [expandedProgrammes, setExpandedProgrammes] = useState<Record<string, boolean>>({});
+  const [selectedExamIds, setSelectedExamIds] = useState<string[]>([]);
+  const [isExamExpanded, setIsExamExpanded] = useState<boolean>(true);
+  const [examSearchQuery, setExamSearchQuery] = useState<string>('');
+
+  const programmesByAuthorityMap = useMemo(() => {
+    const map: Record<string, ExamProgramme[]> = {};
+    programmes.forEach((prog) => {
+      const aid = prog.authorityId || prog.authority?.id;
+      if (aid) {
+        if (!map[aid]) map[aid] = [];
+        map[aid].push(prog);
+      }
+    });
+    return map;
+  }, [programmes]);
+
+  const orphanProgrammes = useMemo(() => {
+    const knownAuthIds = new Set(authorities.map((a) => a.id));
+    return programmes.filter((p) => !knownAuthIds.has(p.authorityId || p.authority?.id || ''));
+  }, [programmes, authorities]);
+
+  const examsByProgrammeMap = useMemo(() => {
+    const map: Record<string, ExamCycle[]> = {};
+    exams.forEach((exam) => {
+      const pid = exam.programmeId || exam.programme?.id;
+      if (pid) {
+        if (!map[pid]) map[pid] = [];
+        map[pid].push(exam);
+      }
+    });
+    return map;
+  }, [exams]);
+
+  const orphanExamCycles = useMemo(() => {
+    const knownIds = new Set(programmes.map((p) => p.id));
+    return exams.filter((e) => !knownIds.has(e.programmeId || e.programme?.id || ''));
+  }, [exams, programmes]);
+
+  const toggleAuthorityExpand = (authId: string) => {
+    setExpandedAuthorities((prev) => ({
+      ...prev,
+      [authId]: !prev[authId],
+    }));
+  };
+
+  const toggleProgrammeExpand = (progId: string) => {
+    setExpandedProgrammes((prev) => ({
+      ...prev,
+      [progId]: !prev[progId],
+    }));
+  };
+
+  const handleToggleAuthority = (auth: ExamAuthority, isCurrentlyAllChecked: boolean) => {
+    const authProgs = programmesByAuthorityMap[auth.id] || [];
+    const authExamIds = authProgs.flatMap((p) => (examsByProgrammeMap[p.id] || []).map((e) => e.id));
+    if (authExamIds.length === 0) return;
+
+    setSelectedExamIds((prev) => {
+      if (isCurrentlyAllChecked) {
+        return prev.filter((id) => !authExamIds.includes(id));
+      } else {
+        return Array.from(new Set([...prev, ...authExamIds]));
+      }
+    });
+    markUnsaved();
+  };
+
+  const handleToggleProgramme = (prog: ExamProgramme, isCurrentlyAllChecked: boolean) => {
+    const progExams = examsByProgrammeMap[prog.id] || [];
+    const progExamIds = progExams.map((e) => e.id);
+    if (progExamIds.length === 0) return;
+
+    setSelectedExamIds((prev) => {
+      if (isCurrentlyAllChecked) {
+        return prev.filter((id) => !progExamIds.includes(id));
+      } else {
+        return Array.from(new Set([...prev, ...progExamIds]));
+      }
+    });
+    markUnsaved();
+  };
+
+  const handleToggleExam = (examId: string) => {
+    setSelectedExamIds((prev) => {
+      const exists = prev.includes(examId);
+      if (exists) {
+        return prev.filter((id) => id !== examId);
+      } else {
+        return [...prev, examId];
+      }
+    });
+    markUnsaved();
+  };
+
   const [availableStages, setAvailableStages] = useState<AcademicStage[]>([]);
   const [academicStageIds, setAcademicStageIds] = useState<string[]>([]);
   const [isStageExpanded, setIsStageExpanded] = useState<boolean>(true);
 
   useEffect(() => {
     loadTaxonomyCategories();
-    AcademicStageApi.getAllStages().then(setAvailableStages).catch(err => console.error(err));
+
+    fetchAuthorities()
+      .then((authData) => {
+        setAuthorities(authData || []);
+        const initExp: Record<string, boolean> = {};
+        (authData || []).forEach((a) => { initExp[a.id] = true; });
+        setExpandedAuthorities(initExp);
+      })
+      .catch(console.error);
+
+    fetchProgrammes()
+      .then((progData) => {
+        setProgrammes(progData || []);
+        const initExp: Record<string, boolean> = {};
+        (progData || []).forEach((p) => { initExp[p.id] = true; });
+        setExpandedProgrammes(initExp);
+      })
+      .catch(console.error);
+
+    fetchExams()
+      .then((examData) => {
+        setExams(examData || []);
+      })
+      .catch(console.error);
+
+    AcademicStageApi.getAllStages()
+      .then((stageData) => {
+        setAvailableStages(stageData || []);
+      })
+      .catch((err) => console.warn('Academic stages unavailable:', err));
+
     if (isEditing && studyMaterialId) {
       loadStudyMaterial(studyMaterialId);
     }
@@ -377,6 +511,10 @@ export const StudyMaterialFormPage: React.FC = () => {
         setAcademicStageIds(data.academicStages.map((as: any) => as.academicStageId));
         setIsStageExpanded(true);
       }
+
+      if (data.examCycleIds && data.examCycleIds.length > 0) {
+        setSelectedExamIds(data.examCycleIds);
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to load study material details');
     } finally {
@@ -395,6 +533,13 @@ export const StudyMaterialFormPage: React.FC = () => {
     setAutosaveStatus('SAVING');
 
     try {
+      if (selectedTaxonomies.length === 0) {
+        setError('Please select at least one Category and Subcategory (required).');
+        setIsLoading(false);
+        setAutosaveStatus('ERROR');
+        return;
+      }
+
       const cleanEnSlug = formatEnglishSlug(enSlug) || formatEnglishSlug(enTitle) || 'study-material';
       const cleanKnSlug = formatKannadaSlug(knSlug, cleanEnSlug) || formatKannadaSlug(knTitle, cleanEnSlug) || cleanEnSlug;
 
@@ -485,6 +630,7 @@ export const StudyMaterialFormPage: React.FC = () => {
           contentType,
           logoUrl: logoUrl || null,
           academicStageIds: academicStageIds.length > 0 ? academicStageIds : null,
+          examCycleIds: selectedExamIds.length > 0 ? selectedExamIds : null,
         };
         saved = await StudyMaterialApi.updateStudyMaterial(studyMaterialId, updatePayload);
 
@@ -534,6 +680,7 @@ export const StudyMaterialFormPage: React.FC = () => {
           contentType,
           logoUrl: logoUrl || null,
           academicStageIds: academicStageIds.length > 0 ? academicStageIds : null,
+          examCycleIds: selectedExamIds.length > 0 ? selectedExamIds : null,
           taxonomyMapping: primaryTaxonomy,
           initialEnglishLocale: enTitle.trim() ? { title: enTitle.trim(), shortTitle: enShortTitle.trim() || undefined, slug: cleanEnSlug, summary: enSummary.trim() || undefined } : undefined,
           initialKannadaLocale: knTitle.trim() ? { title: knTitle.trim(), shortTitle: knShortTitle.trim() || undefined, slug: cleanKnSlug, summary: knSummary.trim() || undefined } : undefined,
@@ -1309,8 +1456,8 @@ export const StudyMaterialFormPage: React.FC = () => {
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Layers size={16} color="#084B7A" />
-                <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#111827', margin: 0 }}>Academic Mapping</h3>
-                <span style={{ fontSize: '10px', color: '#64748B', backgroundColor: '#F1F5F9', padding: '2px 8px', borderRadius: '12px', fontWeight: 600 }}>Optional</span>
+              <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#111827', margin: 0 }}>Category and Subcategory</h3>
+                <span style={{ fontSize: '10px', color: '#B45309', backgroundColor: '#FEF3C7', padding: '2px 8px', borderRadius: '12px', fontWeight: 600 }}>Required</span>
                 {selectedTaxonomies.length > 0 && (
                   <span style={{ fontSize: '11px', color: '#047857', backgroundColor: '#ECFDF5', border: '1px solid #A7F3D0', padding: '2px 8px', borderRadius: '12px', fontWeight: 600 }}>
                     {selectedTaxonomies.length} Mapped
@@ -1445,7 +1592,244 @@ export const StudyMaterialFormPage: React.FC = () => {
           )}
         </Card>
 
+        {/* Compact Exam Mapping Card (Collapsible) */}
+        <Card style={{ padding: '14px 18px', borderRadius: '12px', marginTop: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <GraduationCap size={16} color="#084B7A" />
+                <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#111827', margin: 0 }}>Exam Mapping</h3>
+                <span style={{ fontSize: '10px', color: '#64748B', backgroundColor: '#F1F5F9', padding: '2px 8px', borderRadius: '12px', fontWeight: 600 }}>Optional</span>
+                {selectedExamIds.length > 0 && (
+                  <span style={{ fontSize: '11px', color: '#047857', backgroundColor: '#ECFDF5', border: '1px solid #A7F3D0', padding: '2px 8px', borderRadius: '12px', fontWeight: 600 }}>
+                    {selectedExamIds.length} Mapped
+                  </span>
+                )}
+              </div>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setIsExamExpanded(!isExamExpanded)}
+            >
+              {isExamExpanded ? 'Collapse' : selectedExamIds.length > 0 ? 'Edit Mapping' : '+ Add Exam Mapping'}
+            </Button>
+          </div>
 
+          {isExamExpanded && (
+            <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #F1F5F9' }}>
+              <div style={{ marginBottom: '16px' }}>
+                <Input
+                  value={examSearchQuery}
+                  onChange={(e) => setExamSearchQuery(e.target.value)}
+                  placeholder="Search exams by title or code..."
+                  icon={<Search size={16} color="#64748B" />}
+                />
+              </div>
+              <FormField label="Target Exam Authorities & Programmes">
+                <div style={{ maxHeight: '350px', overflowY: 'auto', border: '1px solid #E2E8F0', borderRadius: '6px', padding: '8px', backgroundColor: '#FFFFFF' }}>
+                  {authorities.map((auth) => {
+                    const q = examSearchQuery.trim().toLowerCase();
+                    const authProgs = programmesByAuthorityMap[auth.id] || [];
+                    const authCycles = authProgs.flatMap((p) => examsByProgrammeMap[p.id] || []);
+                    const authExamIds = authCycles.map((c) => c.id);
+
+                    const authMatch = !q ||
+                      (auth.nameEn && auth.nameEn.toLowerCase().includes(q)) ||
+                      (auth.nameKn && auth.nameKn.toLowerCase().includes(q)) ||
+                      (auth.code && auth.code.toLowerCase().includes(q)) ||
+                      (auth.shortNameEn && auth.shortNameEn.toLowerCase().includes(q));
+
+                    // Filter programmes under this authority
+                    const matchedProgs = authProgs.filter((prog) => {
+                      if (!q || authMatch) return true;
+                      return (
+                        (prog.nameEn && prog.nameEn.toLowerCase().includes(q)) ||
+                        (prog.nameKn && prog.nameKn.toLowerCase().includes(q)) ||
+                        (prog.code && prog.code.toLowerCase().includes(q)) ||
+                        (prog.shortNameEn && prog.shortNameEn.toLowerCase().includes(q))
+                      );
+                    });
+
+                    if (q && !authMatch && matchedProgs.length === 0) return null;
+
+                    const hasAuthCycles = authExamIds.length > 0;
+                    const selectedAuthCycles = authExamIds.filter((id) => selectedExamIds.includes(id));
+                    const isAuthAllChecked = hasAuthCycles && selectedAuthCycles.length === authExamIds.length;
+                    const isAuthSomeChecked = hasAuthCycles && selectedAuthCycles.length > 0;
+                    const isAuthIndeterminate = isAuthSomeChecked && !isAuthAllChecked;
+                    const isAuthRowHighlighted = isAuthAllChecked || isAuthSomeChecked;
+
+                    const isAuthExpanded = q ? true : (expandedAuthorities[auth.id] ?? true);
+
+                    return (
+                      <div key={auth.id} style={{ marginBottom: '10px', borderBottom: '1px solid #F1F5F9', paddingBottom: '8px' }}>
+                        {/* 1. Authority Row (Top Level) */}
+                        <div style={{ display: 'flex', alignItems: 'center', backgroundColor: isAuthRowHighlighted ? '#EFF6FF' : '#F8FAFC', borderRadius: '6px', padding: '4px 6px' }}>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              toggleAuthorityExpand(auth.id);
+                            }}
+                            style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                          >
+                            {isAuthExpanded ? <ChevronDown size={15} color="#475569" /> : <ChevronRight size={15} color="#475569" />}
+                          </button>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, fontSize: '13px', cursor: hasAuthCycles ? 'pointer' : 'default', padding: '2px 6px', flex: 1 }}>
+                            <input
+                              type="checkbox"
+                              checked={isAuthAllChecked}
+                              disabled={!hasAuthCycles}
+                              ref={(el) => {
+                                if (el) el.indeterminate = isAuthIndeterminate;
+                              }}
+                              onChange={() => handleToggleAuthority(auth, isAuthAllChecked)}
+                              style={{ cursor: hasAuthCycles ? 'pointer' : 'not-allowed' }}
+                            />
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, flexWrap: 'wrap' }}>
+                              <span style={{ color: '#0F172A', fontSize: '13px' }}>
+                                🏛️ {auth.nameEn} {auth.nameKn ? `(${auth.nameKn})` : ''}
+                              </span>
+                              {auth.code && (
+                                <span style={{ fontSize: '11px', color: '#1E40AF', backgroundColor: '#DBEAFE', padding: '1px 6px', borderRadius: '4px', fontWeight: 700 }}>
+                                  {auth.code}
+                                </span>
+                              )}
+                              <span style={{ fontSize: '11px', color: '#64748B', fontWeight: 500, marginLeft: 'auto' }}>
+                                {authProgs.length} Programme{authProgs.length === 1 ? '' : 's'}
+                              </span>
+                            </div>
+                          </label>
+                        </div>
+
+                        {/* 2. Programmes Under Authority (Second Level - THAT MUCH ONLY) */}
+                        {isAuthExpanded && (
+                          <div style={{ marginLeft: '16px', display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '6px', borderLeft: '2px solid #E2E8F0', paddingLeft: '8px' }}>
+                            {matchedProgs.map((prog) => {
+                              const progCycles = examsByProgrammeMap[prog.id] || [];
+                              const progExamIds = progCycles.map((e) => e.id);
+                              const hasProgCycles = progExamIds.length > 0;
+                              const isProgChecked = hasProgCycles && progExamIds.every((id) => selectedExamIds.includes(id));
+
+                              return (
+                                <label
+                                  key={prog.id}
+                                  style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    fontWeight: 600,
+                                    fontSize: '13px',
+                                    cursor: hasProgCycles ? 'pointer' : 'default',
+                                    padding: '5px 8px',
+                                    borderRadius: '6px',
+                                    backgroundColor: isProgChecked ? '#EFF6FF' : 'transparent',
+                                    border: isProgChecked ? '1px solid #BFDBFE' : '1px solid transparent',
+                                    transition: 'all 0.15s ease',
+                                  }}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={isProgChecked}
+                                    disabled={!hasProgCycles}
+                                    onChange={() => handleToggleProgramme(prog, isProgChecked)}
+                                    style={{ cursor: hasProgCycles ? 'pointer' : 'not-allowed' }}
+                                  />
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, flexWrap: 'wrap' }}>
+                                    <span style={{ color: '#1E293B' }}>
+                                      📂 {prog.nameEn} {prog.nameKn ? `(${prog.nameKn})` : ''}
+                                    </span>
+                                    {prog.code && (
+                                      <span style={{ fontSize: '10px', color: '#047857', backgroundColor: '#D1FAE5', padding: '1px 6px', borderRadius: '4px', fontWeight: 700 }}>
+                                        {prog.code}
+                                      </span>
+                                    )}
+                                    {!hasProgCycles && (
+                                      <span style={{ fontSize: '11px', color: '#94A3B8', fontStyle: 'italic', marginLeft: 'auto' }}>
+                                        (No active cycle)
+                                      </span>
+                                    )}
+                                  </div>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+
+                  {/* Orphan Programmes */}
+                  {orphanProgrammes.length > 0 && (
+                    <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px dashed #E2E8F0' }}>
+                      <div style={{ fontSize: '12px', fontWeight: 700, color: '#64748B', marginBottom: '6px' }}>Other Programmes:</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginLeft: '8px' }}>
+                        {orphanProgrammes.map((prog) => {
+                          const progCycles = examsByProgrammeMap[prog.id] || [];
+                          const progExamIds = progCycles.map((e) => e.id);
+                          const hasProgCycles = progExamIds.length > 0;
+                          const isProgChecked = hasProgCycles && progExamIds.every((id) => selectedExamIds.includes(id));
+
+                          return (
+                            <label
+                              key={prog.id}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                fontSize: '13px',
+                                fontWeight: 600,
+                                cursor: hasProgCycles ? 'pointer' : 'default',
+                                padding: '5px 8px',
+                                borderRadius: '6px',
+                                backgroundColor: isProgChecked ? '#EFF6FF' : 'transparent',
+                                border: isProgChecked ? '1px solid #BFDBFE' : '1px solid transparent',
+                              }}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isProgChecked}
+                                disabled={!hasProgCycles}
+                                onChange={() => handleToggleProgramme(prog, isProgChecked)}
+                                style={{ cursor: hasProgCycles ? 'pointer' : 'not-allowed' }}
+                              />
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
+                                <span style={{ color: '#1E293B' }}>📂 {prog.nameEn} {prog.nameKn ? `(${prog.nameKn})` : ''}</span>
+                                {prog.code && <span style={{ fontSize: '10px', color: '#047857', backgroundColor: '#D1FAE5', padding: '1px 5px', borderRadius: '4px', fontWeight: 700 }}>{prog.code}</span>}
+                                {!hasProgCycles && <span style={{ fontSize: '11px', color: '#94A3B8', fontStyle: 'italic', marginLeft: 'auto' }}>(No active cycle)</span>}
+                              </div>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {authorities.length === 0 && programmes.length === 0 && (
+                    <div style={{ padding: '8px', fontSize: '13px', color: '#64748B' }}>No exam authorities or programmes available...</div>
+                  )}
+                </div>
+              </FormField>
+              {selectedExamIds.length > 0 && (
+                <div style={{ marginTop: '8px', display: 'flex', justifyContent: 'flex-end' }}>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedExamIds([]);
+                      markUnsaved();
+                    }}
+                  >
+                    Clear Exam Mapping
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+        </Card>
 
         {/* Compact Access & Monetization Card */}
         <Card style={{ borderTop: '4px solid #8B5CF6', padding: '14px 18px', borderRadius: '12px' }}>

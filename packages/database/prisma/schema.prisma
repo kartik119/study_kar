@@ -90,7 +90,12 @@ model StudentProfile {
   createdAt                   DateTime            @default(now())
   updatedAt                   DateTime            @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscriptions     StudentSubscription[]
+  transactions      PaymentTransaction[]
+  couponRedemptions CouponRedemption[]
+  invoices          Invoice[]
+  refunds           Refund[]
 
   @@map("student_profiles")
 }
@@ -176,6 +181,12 @@ model AdminUser {
   auditLogs  AdminAuditLog[]
   sessions   UserSession[]
 
+  adminProfile  AdminProfile?
+  moduleAccess  AdminModuleAccess[]
+  examScopes    AdminExamScope[]
+  mentorProfile AdminMentorProfile?
+  managedAdmins AdminProfile[]      @relation("ReportingManager")
+
   syllabiReviewed  ExamSyllabus[] @relation("SyllabusReviewedBy")
   syllabiApproved  ExamSyllabus[] @relation("SyllabusApprovedBy")
   syllabiPublished ExamSyllabus[] @relation("SyllabusPublishedBy")
@@ -187,8 +198,12 @@ model AdminUser {
 
 model Role {
   id          String   @id @default(uuid())
+  code        String   @unique
   name        String   @unique
   description String?
+  isSystem    Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  scopePolicy String   @default("ALL_EXAMS") // "ALL_EXAMS", "ASSIGNED_EXAMS_ONLY", "NOT_APPLICABLE"
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -246,6 +261,59 @@ model AdminRole {
 
   @@id([adminUserId, roleId])
   @@map("admin_roles")
+}
+
+model AdminProfile {
+  id                 String   @id @default(uuid())
+  adminUserId        String   @unique
+  employeeId         String?  @unique
+  phone              String?
+  department         String?
+  designation        String?
+  reportingManagerId String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  adminUser        AdminUser  @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+  reportingManager AdminUser? @relation("ReportingManager", fields: [reportingManagerId], references: [id], onDelete: SetNull)
+
+  @@map("admin_profiles")
+}
+
+model AdminModuleAccess {
+  adminUserId String
+  moduleCode  String
+  grantedAt   DateTime @default(now())
+
+  adminUser AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+
+  @@id([adminUserId, moduleCode])
+  @@map("admin_module_access")
+}
+
+model AdminExamScope {
+  adminUserId     String
+  examProgrammeId String
+  grantedAt       DateTime @default(now())
+
+  adminUser     AdminUser     @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+  examProgramme ExamProgramme @relation(fields: [examProgrammeId], references: [id], onDelete: Cascade)
+
+  @@id([adminUserId, examProgrammeId])
+  @@map("admin_exam_scopes")
+}
+
+model AdminMentorProfile {
+  adminUserId        String   @id
+  mentorshipMode     String   @default("BOTH")
+  maxCapacity        Int?
+  activeStudentCount Int      @default(0)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  adminUser AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+
+  @@map("admin_mentor_profiles")
 }
 
 model AdminAuditLog {
@@ -349,9 +417,10 @@ model ExamProgramme {
   createdAt                 DateTime @default(now())
   updatedAt                 DateTime @updatedAt
 
-  authority  ExamAuthority @relation(fields: [authorityId], references: [id], onDelete: Cascade)
-  cycles     ExamCycle[]
-  testSeries TestSeries[]
+  authority   ExamAuthority    @relation(fields: [authorityId], references: [id], onDelete: Cascade)
+  cycles      ExamCycle[]
+  testSeries  TestSeries[]
+  adminScopes AdminExamScope[]
 
   @@map("exam_programmes")
 }
@@ -399,10 +468,11 @@ model ExamCycle {
   syllabi           ExamSyllabus[]
   mcqQuestions      McqQuestion[]
 
-  mockTests          MockTest[]
-  currentAffairs     CurrentAffairExam[]
-  studyPlanTemplates StudyPlanTemplate[]
-  studyPlans         StudentStudyPlan[]
+  mockTests           MockTest[]
+  currentAffairs      CurrentAffairExam[]
+  studyPlanTemplates  StudyPlanTemplate[]
+  studyPlans          StudentStudyPlan[]
+  subscriptionModules SubscriptionModule[]
 
   @@unique([programmeId, cycleCode])
   @@index([status, visibility])
@@ -622,7 +692,7 @@ model ExamPattern {
 model ExamStage {
   id                      String             @id @default(uuid())
   examPatternId           String
-  examCode                String?            // Denormalized exam programme code (e.g., IAS, KAS)
+  examCode                String? // Denormalized exam programme code (e.g., IAS, KAS)
   code                    String
   stageType               ExamStageType
   nameEn                  String
@@ -663,7 +733,7 @@ model ExamStage {
 model ExamPaper {
   id                                 String              @id @default(uuid())
   examStageId                        String
-  examCode                           String?             // Denormalized exam programme code
+  examCode                           String? // Denormalized exam programme code
   code                               String
   assessmentMode                     ExamAssessmentMode
   nameEn                             String
@@ -829,7 +899,7 @@ model ExamSyllabus {
 model ExamSyllabusNode {
   id              String                @id @default(uuid())
   examSyllabusId  String
-  examCode        String?               // Denormalized exam programme code
+  examCode        String? // Denormalized exam programme code
   parentId        String?
   code            String
   nodeType        ExamSyllabusNodeType
@@ -869,8 +939,6 @@ model ExamSyllabusNode {
   @@index([examSyllabusId, nodeType])
   @@map("exam_syllabus_nodes")
 }
-
-
 
 model StudyTopicPlanningMetadata {
   id                      String   @id @default(uuid())
@@ -1399,11 +1467,11 @@ model McqQuestion {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
-  examCycle    ExamCycle?                @relation(fields: [examCycleId], references: [id], onDelete: SetNull)
-  syllabusNode ExamSyllabusNode?         @relation(fields: [syllabusNodeId], references: [id], onDelete: SetNull)
-  category     McqCategory?              @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  subcategory  McqSubcategory?           @relation(fields: [subcategoryId], references: [id], onDelete: SetNull)
-  topic        McqTopic?                 @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  examCycle    ExamCycle?        @relation(fields: [examCycleId], references: [id], onDelete: SetNull)
+  syllabusNode ExamSyllabusNode? @relation(fields: [syllabusNodeId], references: [id], onDelete: SetNull)
+  category     McqCategory?      @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  subcategory  McqSubcategory?   @relation(fields: [subcategoryId], references: [id], onDelete: SetNull)
+  topic        McqTopic?         @relation(fields: [topicId], references: [id], onDelete: SetNull)
   // knowledgeArea removed temporarily
 
   mockTestQuestions        MockTestQuestion[]
@@ -2499,7 +2567,7 @@ model StudyPlannerRule {
 }
 
 model StudyPlanTemplate {
-  id                  String   @id @default(uuid())
+  id                  String    @id @default(uuid())
   name                String
   examCycleId         String?
   customExamName      String?
@@ -2507,10 +2575,10 @@ model StudyPlanTemplate {
   defaultDailyMinutes Int
   totalTopics         Int?
   targetExamDate      DateTime?
-  description         String?  @db.Text
-  isActive            Boolean  @default(true)
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  description         String?   @db.Text
+  isActive            Boolean   @default(true)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
   examCycle     ExamCycle?         @relation(fields: [examCycleId], references: [id], onDelete: Cascade)
   plannerRule   StudyPlannerRule   @relation(fields: [plannerRuleId], references: [id], onDelete: Cascade)
@@ -2646,4 +2714,789 @@ model StudyPlanHistory {
 
   @@index([studyPlanId])
   @@map("study_plan_histories")
+}
+
+enum ModuleAccessType {
+  FREE
+  FREEMIUM
+  PAID
+}
+
+enum ModuleScopeType {
+  ENTIRE_EXAM
+  SELECTED_FEATURES
+  GLOBAL
+}
+
+enum ModuleStatus {
+  DRAFT
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum SubscriptionModuleType {
+  FULL_EXAM
+  MCQ
+  STUDY_MATERIALS
+  MOCK_TESTS
+  CURRENT_AFFAIRS
+  QUICK_REVISION
+  STUDY_PLANS
+  TEST_SERIES
+  CUSTOM_BUNDLE
+}
+
+enum PlanBillingCycle {
+  MONTHLY
+  QUARTERLY
+  HALF_YEARLY
+  YEARLY
+  ONE_TIME
+  CUSTOM
+}
+
+enum PlanDurationUnit {
+  DAYS
+  MONTHS
+  YEARS
+  WEEKS
+}
+
+enum PlanStatus {
+  DRAFT
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum PlanType {
+  FREE
+  FREEMIUM
+  PAID
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+  PENDING
+  PAUSED
+  SCHEDULED
+}
+
+model SubscriptionModule {
+  id           String                 @id @default(uuid())
+  code         String                 @unique
+  name         String
+  description  String?
+  examId       String?
+  scopeType    ModuleScopeType        @default(SELECTED_FEATURES)
+  moduleType   SubscriptionModuleType @default(CUSTOM_BUNDLE)
+  accessType   ModuleAccessType       @default(PAID)
+  status       ModuleStatus           @default(DRAFT)
+  iconUrl      String?
+  imageUrl     String?
+  features     Json?
+  displayOrder Int                    @default(0)
+  publishDate  DateTime?
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+  createdBy    String?
+  updatedBy    String?
+
+  entitlements  ModuleEntitlement[]
+  exam          ExamCycle?          @relation(fields: [examId], references: [id], onDelete: Restrict)
+  plans         SubscriptionPlan[]
+  couponModules CouponModule[]
+
+  @@index([accessType])
+  @@index([examId])
+  @@index([status])
+  @@map("subscription_modules")
+}
+
+model ModuleEntitlement {
+  id          String   @id @default(uuid())
+  moduleId    String
+  featureKey  String
+  name        String
+  description String?
+  examId      String?
+  stageId     String?
+  paperId     String?
+  subjectId   String?
+  enabled     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  module SubscriptionModule @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@index([examId])
+  @@index([featureKey])
+  @@index([moduleId])
+  @@map("module_entitlements")
+}
+
+model SubscriptionPlan {
+  id                String            @id @default(uuid())
+  moduleId          String
+  code              String?           @unique
+  name              String
+  description       String?
+  planType          PlanType          @default(PAID)
+  price             Decimal           @default(0.00) @db.Decimal(10, 2)
+  currency          String            @default("INR")
+  billingCycle      PlanBillingCycle  @default(MONTHLY)
+  durationValue     Int               @default(1)
+  durationUnit      PlanDurationUnit  @default(MONTHS)
+  trialEnabled      Boolean           @default(false)
+  trialDuration     Int?
+  trialDurationUnit PlanDurationUnit?
+  autoRenewEligible Boolean           @default(false)
+  benefits          Json?
+  status            PlanStatus        @default(DRAFT)
+  displayOrder      Int               @default(0)
+  publishDate       DateTime?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  createdBy         String?
+  updatedBy         String?
+
+  studentSubscriptions StudentSubscription[]
+  module               SubscriptionModule    @relation(fields: [moduleId], references: [id])
+  couponPlans          CouponPlan[]
+
+  @@index([billingCycle])
+  @@index([moduleId])
+  @@index([planType])
+  @@index([status])
+  @@map("subscription_plans")
+}
+
+model StudentSubscription {
+  id                 String             @id @default(uuid())
+  subscriptionNumber String?
+  studentId          String
+  planId             String?
+  productId          String?
+  status             SubscriptionStatus @default(ACTIVE)
+  paymentStatus      String             @default("PAID")
+  startDate          DateTime           @default(now())
+  endDate            DateTime?
+  amount             Decimal?           @default(0.00) @db.Decimal(10, 2)
+  amountPaid         Decimal?           @db.Decimal(10, 2)
+  currency           String             @default("INR")
+  autoRenew          Boolean            @default(false)
+  assignmentSource   String             @default("PAID_PURCHASE")
+  cancelAtPeriodEnd  Boolean            @default(false)
+  cancelledAt        DateTime?
+  pausedAt           DateTime?
+  pauseReason        String?
+  resumeDate         DateTime?
+  adminNotes         String?
+  createdBy          String?
+  updatedBy          String?
+  paymentId          String?
+  paymentMethod      String?
+  transactionId      String?
+  invoiceId          String?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  plan              SubscriptionPlan?            @relation(fields: [planId], references: [id])
+  student           StudentProfile               @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  histories         StudentSubscriptionHistory[]
+  transactions      PaymentTransaction[]
+  couponRedemptions CouponRedemption[]
+  invoices          Invoice[]
+  refunds           Refund[]
+
+  @@index([planId])
+  @@index([status])
+  @@index([studentId])
+  @@index([subscriptionNumber])
+  @@index([paymentStatus])
+  @@map("student_subscriptions")
+}
+
+model StudentSubscriptionHistory {
+  id             String   @id @default(uuid())
+  subscriptionId String
+  action         String
+  oldValue       Json?
+  newValue       Json?
+  actorType      String   @default("ADMIN")
+  actorId        String?
+  actorName      String?
+  reason         String?
+  createdAt      DateTime @default(now())
+
+  subscription StudentSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([subscriptionId])
+  @@index([action])
+  @@map("student_subscription_history")
+}
+
+enum TransactionStatus {
+  PENDING
+  PROCESSING
+  SUCCESSFUL
+  FAILED
+  CANCELLED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+model PaymentTransaction {
+  id                String            @id @default(uuid())
+  transactionNumber String            @unique
+  studentId         String
+  subscriptionId    String?
+  planId            String?
+  moduleId          String?
+  examId            String?
+  amount            Decimal           @db.Decimal(10, 2)
+  currency          String            @default("INR")
+  paymentMethod     String?
+  paymentProvider   String?
+  paymentSource     String?           @default("RAZORPAY")
+  gatewayOrderId    String?
+  gatewayPaymentId  String?
+  gatewaySignature  String?
+  status            TransactionStatus @default(PENDING)
+  failureCode       String?
+  failureReason     String?
+  invoiceId         String?
+  paidAt            DateTime?
+  metadata          Json?
+
+  planSnapshot   Json?
+  moduleSnapshot Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  student           StudentProfile       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  subscription      StudentSubscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  couponRedemptions CouponRedemption[]
+  invoice           Invoice?
+  refunds           Refund[]
+
+  @@index([studentId])
+  @@index([subscriptionId])
+  @@index([status])
+  @@index([transactionNumber])
+  @@index([gatewayOrderId])
+  @@index([gatewayPaymentId])
+  @@index([createdAt])
+  @@map("payment_transactions")
+}
+
+enum CouponScopeType {
+  ALL_PLANS
+  SELECTED_MODULES
+  SELECTED_PLANS
+  SELECTED_MODULES_AND_PLANS
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED_AMOUNT
+}
+
+enum CouponStatus {
+  DRAFT
+  ACTIVE
+  SCHEDULED
+  INACTIVE
+  EXPIRED
+}
+
+enum CouponUsageType {
+  LIMITED
+  UNLIMITED
+}
+
+model Coupon {
+  id                 String          @id @default(uuid())
+  code               String          @unique
+  name               String
+  description        String?         @db.Text
+  discountType       DiscountType
+  discountValue      Decimal         @db.Decimal(10, 2)
+  maximumDiscount    Decimal?        @db.Decimal(10, 2)
+  minimumOrderAmount Decimal?        @db.Decimal(10, 2)
+  scopeType          CouponScopeType @default(ALL_PLANS)
+  startDate          DateTime
+  endDate            DateTime
+  usageType          CouponUsageType @default(UNLIMITED)
+  maximumUsage       Int?
+  usedCount          Int             @default(0)
+  usagePerStudent    Int             @default(1)
+  firstTimeOnly      Boolean         @default(false)
+  isActive           Boolean         @default(true)
+  showPublicly       Boolean         @default(true)
+  status             CouponStatus    @default(DRAFT)
+  internalNotes      String?         @db.Text
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  createdBy          String?
+  updatedBy          String?
+
+  applicableModules CouponModule[]
+  applicablePlans   CouponPlan[]
+  redemptions       CouponRedemption[]
+
+  @@index([code])
+  @@index([status])
+  @@index([startDate, endDate])
+  @@map("coupons")
+}
+
+model CouponModule {
+  id       String @id @default(uuid())
+  couponId String
+  moduleId String
+
+  coupon Coupon             @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  module SubscriptionModule @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@unique([couponId, moduleId])
+  @@index([moduleId])
+  @@map("coupon_modules")
+}
+
+model CouponPlan {
+  id       String @id @default(uuid())
+  couponId String
+  planId   String
+
+  coupon Coupon           @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  plan   SubscriptionPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@unique([couponId, planId])
+  @@index([planId])
+  @@map("coupon_plans")
+}
+
+model CouponRedemption {
+  id             String   @id @default(uuid())
+  couponId       String
+  studentId      String
+  subscriptionId String?
+  transactionId  String?
+  planId         String?
+  originalAmount Decimal  @db.Decimal(10, 2)
+  discountAmount Decimal  @db.Decimal(10, 2)
+  finalAmount    Decimal  @db.Decimal(10, 2)
+  redeemedAt     DateTime @default(now())
+  status         String   @default("SUCCESS")
+  metadata       Json?
+
+  coupon       Coupon               @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  student      StudentProfile       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  subscription StudentSubscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  transaction  PaymentTransaction?  @relation(fields: [transactionId], references: [id], onDelete: SetNull)
+
+  @@index([couponId])
+  @@index([studentId])
+  @@index([transactionId])
+  @@map("coupon_redemptions")
+}
+
+enum InvoiceStatus {
+  PAID
+  PENDING
+  FAILED
+  CANCELLED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+model Invoice {
+  id             String  @id @default(uuid())
+  invoiceNumber  String  @unique
+  studentId      String
+  subscriptionId String?
+  transactionId  String? @unique
+  planId         String?
+  moduleId       String?
+  examId         String?
+
+  currency       String  @default("INR")
+  subtotal       Decimal @db.Decimal(10, 2)
+  discountAmount Decimal @default(0) @db.Decimal(10, 2)
+  taxAmount      Decimal @default(0) @db.Decimal(10, 2)
+  finalAmount    Decimal @db.Decimal(10, 2)
+
+  // Tax breakdown structural fields
+  taxableAmount Decimal? @db.Decimal(10, 2)
+  cgst          Decimal? @db.Decimal(10, 2)
+  sgst          Decimal? @db.Decimal(10, 2)
+  igst          Decimal? @db.Decimal(10, 2)
+  totalTax      Decimal? @db.Decimal(10, 2)
+
+  paymentStatus    InvoiceStatus @default(PAID)
+  paymentMethod    String?
+  paymentGateway   String?       @default("RAZORPAY")
+  gatewayOrderId   String?
+  gatewayPaymentId String?
+
+  invoiceDate DateTime      @default(now())
+  pdfUrl      String?
+  status      InvoiceStatus @default(PAID)
+
+  // Historical Snapshots
+  studentNameSnapshot   String?
+  studentEmailSnapshot  String?
+  studentPhoneSnapshot  String?
+  planNameSnapshot      String?
+  moduleNameSnapshot    String?
+  examNameSnapshot      String?
+  billingPeriodSnapshot String?
+
+  // Coupon snapshot
+  couponCodeSnapshot    String?
+  discountTypeSnapshot  String?
+  discountValueSnapshot Decimal? @db.Decimal(10, 2)
+
+  notes    String? @db.Text
+  metadata Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  student      StudentProfile       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  subscription StudentSubscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  transaction  PaymentTransaction?  @relation(fields: [transactionId], references: [id], onDelete: SetNull)
+  items        InvoiceItem[]
+  refunds      Refund[]
+
+  @@index([invoiceNumber])
+  @@index([studentId])
+  @@index([subscriptionId])
+  @@index([transactionId])
+  @@index([status])
+  @@index([invoiceDate])
+  @@index([paymentMethod])
+  @@map("invoices")
+}
+
+model InvoiceItem {
+  id             String  @id @default(uuid())
+  invoiceId      String
+  name           String
+  description    String? @db.Text
+  itemType       String  @default("SUBSCRIPTION_PLAN")
+  quantity       Int     @default(1)
+  unitAmount     Decimal @db.Decimal(10, 2)
+  discountAmount Decimal @default(0) @db.Decimal(10, 2)
+  taxAmount      Decimal @default(0) @db.Decimal(10, 2)
+  finalAmount    Decimal @db.Decimal(10, 2)
+
+  metadata  Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+  @@map("invoice_items")
+}
+
+enum RefundStatus {
+  PENDING
+  APPROVED
+  PROCESSING
+  REFUNDED
+  REJECTED
+  FAILED
+}
+
+enum RefundType {
+  FULL
+  PARTIAL
+}
+
+model Refund {
+  id             String  @id @default(uuid())
+  refundNumber   String  @unique
+  studentId      String
+  subscriptionId String?
+  transactionId  String
+  invoiceId      String?
+
+  refundType      RefundType @default(FULL)
+  requestedAmount Decimal    @db.Decimal(10, 2)
+  approvedAmount  Decimal?   @db.Decimal(10, 2)
+  originalAmount  Decimal    @db.Decimal(10, 2)
+  currency        String     @default("INR")
+
+  status          RefundStatus @default(PENDING)
+  reason          String       @db.Text
+  rejectionReason String?      @db.Text
+  internalNotes   String?      @db.Text
+  paymentMethod   String?
+  gatewayRefundId String?
+  failureReason   String?
+
+  requestedAt DateTime  @default(now())
+  approvedAt  DateTime?
+  processedAt DateTime?
+  rejectedAt  DateTime?
+
+  requestedBy String? @default("STUDENT")
+  approvedBy  String?
+  rejectedBy  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  metadata  Json?
+
+  // Relations
+  student      StudentProfile       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  subscription StudentSubscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  transaction  PaymentTransaction   @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  invoice      Invoice?             @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  histories    RefundHistory[]
+
+  @@index([refundNumber])
+  @@index([studentId])
+  @@index([subscriptionId])
+  @@index([transactionId])
+  @@index([invoiceId])
+  @@index([status])
+  @@index([requestedAt])
+  @@map("refunds")
+}
+
+model RefundHistory {
+  id             String        @id @default(uuid())
+  refundId       String
+  action         String
+  previousStatus RefundStatus?
+  newStatus      RefundStatus
+  actorType      String        @default("ADMIN")
+  actorId        String?
+  actorName      String?
+  notes          String?       @db.Text
+  createdAt      DateTime      @default(now())
+
+  refund Refund @relation(fields: [refundId], references: [id], onDelete: Cascade)
+
+  @@index([refundId])
+  @@map("refund_history")
+}
+
+// -----------------------------------------------------------------------------
+// RAZORPAY PAYMENT GATEWAY MODELS
+// -----------------------------------------------------------------------------
+
+enum GatewayEnvironment {
+  TEST
+  LIVE
+}
+
+enum GatewayAccountMode {
+  STANDARD
+  ROUTE
+}
+
+enum PaymentCaptureMode {
+  AUTOMATIC
+  MANUAL
+}
+
+enum GatewayIntegrationStatus {
+  ACTIVE
+  INACTIVE
+  CONFIGURATION_REQUIRED
+  CONNECTION_ERROR
+  TEST_MODE
+}
+
+model PaymentGatewayConfiguration {
+  id          String             @id @default(uuid())
+  gateway     String             @default("RAZORPAY")
+  environment GatewayEnvironment @default(TEST)
+  accountMode GatewayAccountMode @default(STANDARD)
+
+  keyId                  String?
+  encryptedKeySecret     String? @db.Text
+  encryptedWebhookSecret String? @db.Text
+
+  currency                 String             @default("INR")
+  captureMode              PaymentCaptureMode @default(AUTOMATIC)
+  paymentDescriptionPrefix String?            @default("Study Karnataka Subscription")
+  orderExpiryMinutes       Int                @default(15)
+
+  retryEnabled         Boolean @default(true)
+  internationalEnabled Boolean @default(false)
+  upiEnabled           Boolean @default(true)
+  cardsEnabled         Boolean @default(true)
+  netBankingEnabled    Boolean @default(true)
+  walletEnabled        Boolean @default(true)
+  emiEnabled           Boolean @default(false)
+
+  webhookUrl    String?
+  webhookEvents Json?
+
+  isActive Boolean                  @default(false)
+  status   GatewayIntegrationStatus @default(CONFIGURATION_REQUIRED)
+
+  lastVerifiedAt         DateTime?
+  lastVerificationStatus String?
+  lastVerificationError  String?   @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  updatedBy String?
+  metadata  Json?
+
+  @@unique([gateway, environment])
+  @@index([gateway])
+  @@index([environment])
+  @@index([isActive])
+  @@index([status])
+  @@map("payment_gateway_configurations")
+}
+
+enum WebhookProcessStatus {
+  RECEIVED
+  PROCESSED
+  FAILED
+  IGNORED
+}
+
+model WebhookEventLog {
+  id           String               @id @default(uuid())
+  gateway      String               @default("RAZORPAY")
+  eventId      String?              @unique
+  eventType    String
+  paymentId    String?
+  orderId      String?
+  refundId     String?
+  status       WebhookProcessStatus @default(RECEIVED)
+  payload      Json?
+  errorMessage String?              @db.Text
+  retryCount   Int                  @default(0)
+
+  receivedAt  DateTime  @default(now())
+  processedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([gateway])
+  @@index([eventId])
+  @@index([eventType])
+  @@index([paymentId])
+  @@index([orderId])
+  @@index([status])
+  @@index([receivedAt])
+  @@map("webhook_event_logs")
+}
+
+enum RevisionStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model RevisionCategory {
+  id                     String                   @id @default(uuid())
+  code                   String                   @unique
+  nameEn                 String
+  nameKn                 String
+  descriptionEn          String?
+  descriptionKn          String?
+  iconUrl                String?
+  displayOrder           Int                      @default(0)
+  isActive               Boolean                  @default(true)
+  createdByAdminId       String?
+  updatedByAdminId       String?
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+  cards                  RevisionCard[]
+  subcategories          RevisionSubcategory[]
+
+  @@map("revision_categories")
+}
+
+model RevisionSubcategory {
+  id                  String              @id @default(uuid())
+  categoryId          String
+  code                String              @unique
+  nameEn              String
+  nameKn              String
+  descriptionEn       String?
+  descriptionKn       String?
+  iconUrl             String?
+  displayOrder        Int                 @default(0)
+  isActive            Boolean             @default(true)
+  createdByAdminId    String?
+  updatedByAdminId    String?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  cards               RevisionCard[]
+  category            RevisionCategory    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@index([categoryId])
+  @@map("revision_subcategories")
+}
+
+model RevisionCollection {
+  id             String           @id @default(uuid())
+  name           String
+  description    String?
+  isFreeSample   Boolean          @default(false)
+  status         RevisionStatus   @default(DRAFT)
+  examCycleId    String?
+  subjectId      String?
+  categoryId     String?
+  subcategoryId  String?
+  topicId        String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  cards          RevisionCard[]
+
+  @@map("revision_collections")
+}
+
+model RevisionCard {
+  id                     String                  @id @default(uuid())
+  collectionId           String?
+  isFreeSample           Boolean                 @default(false)
+  status                 RevisionStatus          @default(DRAFT)
+  orderIndex             Int                     @default(0)
+  examCycleId            String?
+  subjectId              String?
+  categoryId             String?
+  subcategoryId          String?
+  topicId                String?
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  contentEn              Json?
+  contentKn              Json?
+  metaDescriptionEn      String?
+  metaDescriptionKn      String?
+  metaTitleEn            String?
+  metaTitleKn            String?
+  priority               String                  @default("Medium")
+  publishDate            DateTime?
+  slug                   String                  @unique
+  titleEn                String
+  titleKn                String?
+  imageEn                String?
+  imageKn                String?
+  category               RevisionCategory?       @relation(fields: [categoryId], references: [id])
+  collection             RevisionCollection?     @relation(fields: [collectionId], references: [id])
+  subcategory            RevisionSubcategory?    @relation(fields: [subcategoryId], references: [id])
+
+  @@index([collectionId])
+  @@index([status])
+  @@map("revision_cards")
 }

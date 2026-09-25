@@ -5,6 +5,7 @@ import { createAcademicStageSchema, updateAcademicStageSchema } from '@study-kar
 
 export class AcademicStageService {
   static async getAllStages(): Promise<AcademicStage[]> {
+    if (!prisma.academicStage) return [];
     return prisma.academicStage.findMany({
       orderBy: { displayOrder: 'asc' },
     });

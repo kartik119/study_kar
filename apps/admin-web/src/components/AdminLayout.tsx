@@ -10,7 +10,7 @@ import {
   Newspaper,
   Zap,
   CreditCard,
-  UserCheck,
+  UserCheck, Shield, Briefcase, History,
   LifeBuoy,
   Settings,
   ChevronLeft,
@@ -27,6 +27,11 @@ import {
   Layers,
   Award,
   FileText,
+  Package,
+  ArrowLeftRight,
+  Tag,
+  RotateCcw,
+  BarChart3,
 } from 'lucide-react';
 import { SearchInput, DropdownMenu } from '@study-karnataka/ui';
 import { PermissionKey } from '@study-karnataka/shared-types';
@@ -84,6 +89,36 @@ export const STUDY_PLANS_SUBMENU = [
   { name: 'Completion Tracking', path: '/study-plans/tracking', icon: CalendarCheck, permission: 'study_plans.view' as PermissionKey },
 ];
 
+export const QUICK_REVISION_SUBMENU: MenuItem[] = [
+  { name: 'Revision Library', path: '/quick-revision/library', icon: BookOpen, permission: 'quick_revision.view' as PermissionKey },
+  { name: 'Add Card', path: '/quick-revision/add', icon: PlusCircle, permission: 'quick_revision.manage' as PermissionKey },
+  { name: 'Categories', path: '/quick-revision/categories', icon: FolderTree, permission: 'quick_revision.manage' as PermissionKey },
+];
+
+export const SUBSCRIPTIONS_SUBMENU: Array<{
+  name: string;
+  path: string;
+  icon?: React.ComponentType<{ className?: string }>;
+  permission?: PermissionKey;
+}> = [
+  { name: 'Modules', path: '/subscriptions/modules', icon: Package, permission: 'subscriptions_payments.view' as PermissionKey },
+  { name: 'Plans', path: '/subscriptions/plans', icon: Layers, permission: 'subscriptions_payments.view' as PermissionKey },
+  { name: 'Student Subscriptions', path: '/subscriptions/student-subscriptions', icon: Users, permission: 'subscriptions_payments.view' as PermissionKey },
+  { name: 'Transactions', path: '/subscriptions/transactions', icon: ArrowLeftRight, permission: 'subscriptions_payments.view' as PermissionKey },
+  { name: 'Coupons', path: '/subscriptions/coupons', icon: Tag, permission: 'subscriptions_payments.view' as PermissionKey },
+  { name: 'Invoices', path: '/subscriptions/invoices', icon: FileText, permission: 'subscriptions_payments.view' as PermissionKey },
+  { name: 'Refunds', path: '/subscriptions/refunds', icon: RotateCcw, permission: 'subscriptions_payments.view' as PermissionKey },
+  { name: 'Razorpay', path: '/subscriptions/razorpay', icon: CreditCard, permission: 'subscriptions_payments.view' as PermissionKey },
+  { name: 'Payment Reports', path: '/subscriptions/reports', icon: BarChart3, permission: 'subscriptions_payments.view' as PermissionKey },
+];
+
+export const TEAM_SUBMENU: MenuItem[] = [
+  { name: 'Team Members', path: '/team/members', icon: Users, permission: 'team.view' as PermissionKey },
+  { name: 'Roles & Permissions', path: '/team/roles-permissions', icon: Shield, permission: 'team.manage' as PermissionKey },
+  { name: 'Work Assignments', path: '/team/work-assignments', icon: Briefcase, permission: 'team.view' as PermissionKey },
+  { name: 'Activity Logs', path: '/team/activity-logs', icon: History, permission: 'team.view' as PermissionKey },
+];
+
 export const ALL_ADMIN_MENU_ITEMS: MenuItem[] = [
   { name: 'Dashboard', path: '/', icon: LayoutDashboard, permission: 'dashboard.view' },
   {
@@ -122,14 +157,99 @@ export const ALL_ADMIN_MENU_ITEMS: MenuItem[] = [
     permission: 'current_affairs.view',
     subItems: CURRENT_AFFAIRS_SUBMENU,
   },
-  { name: 'Quick Revision', path: '/quick-revision', icon: Zap, permission: 'quick_revision.view' },
-  { name: 'Subscriptions & Payments', path: '/subscriptions', icon: CreditCard, permission: 'subscriptions_payments.view' },
-  { name: 'Team', path: '/team', icon: UserCheck, permission: 'team.view' },
+  { 
+    name: 'Quick Revision', 
+    path: '/quick-revision', 
+    icon: Zap, 
+    permission: 'quick_revision.view',
+    subItems: QUICK_REVISION_SUBMENU,
+  },
+  { 
+    name: 'Subscriptions & Payments', 
+    path: '/subscriptions', 
+    icon: CreditCard, 
+    permission: 'subscriptions_payments.view',
+    subItems: SUBSCRIPTIONS_SUBMENU,
+  },
+  { 
+    name: 'Team', 
+    path: '/team', 
+    icon: UserCheck, 
+    permission: 'team.view',
+    subItems: TEAM_SUBMENU,
+  },
   { name: 'Support', path: '/support', icon: LifeBuoy, permission: 'support.view' },
   { name: 'Settings', path: '/settings', icon: Settings, permission: 'settings.view' },
 ];
 
 export const ADMIN_MENU_ITEMS = ALL_ADMIN_MENU_ITEMS;
+
+interface ErrorBoundaryProps {
+  children: React.ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+class AdminErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('Admin Panel Uncaught Error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: '40px 24px', maxWidth: '640px', margin: '40px auto', textAlign: 'center', backgroundColor: '#FFFFFF', borderRadius: '12px', border: '1px solid #E2E8F0', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+          <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: '#FEE2E2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontSize: '20px', fontWeight: 'bold' }}>
+            !
+          </div>
+          <h3 style={{ margin: '0 0 8px', fontSize: '18px', fontWeight: 700, color: '#0F172A' }}>
+            Something went wrong loading this screen
+          </h3>
+          <p style={{ margin: '0 0 20px', fontSize: '14px', color: '#64748B' }}>
+            {this.state.error?.message || 'An unexpected rendering error occurred.'}
+          </p>
+          {this.state.error?.stack && (
+            <pre style={{ textAlign: 'left', background: '#F8FAFC', padding: '12px', fontSize: '12px', color: '#DC2626', overflowX: 'auto', borderRadius: '6px', maxHeight: '200px' }}>
+              {this.state.error.stack}
+            </pre>
+          )}
+          <button
+            type="button"
+            onClick={() => {
+              this.setState({ hasError: false, error: null });
+              window.location.reload();
+            }}
+            style={{
+              padding: '8px 20px',
+              backgroundColor: '#1E3A8A',
+              color: '#FFFFFF',
+              border: 'none',
+              borderRadius: '6px',
+              fontWeight: 600,
+              fontSize: '14px',
+              cursor: 'pointer',
+            }}
+          >
+            Reload Page
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 export const AdminLayout: React.FC = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -139,6 +259,8 @@ export const AdminLayout: React.FC = () => {
   const [manualMcqOpen, setManualMcqOpen] = useState<boolean | null>(null);
   const [manualStudyPlansOpen, setManualStudyPlansOpen] = useState<boolean | null>(null);
   const [manualCurrentAffairsOpen, setManualCurrentAffairsOpen] = useState<boolean | null>(null);
+  const [manualQuickRevisionOpen, setManualQuickRevisionOpen] = useState<boolean | null>(null);
+  const [manualSubscriptionsOpen, setManualSubscriptionsOpen] = useState<boolean | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -147,12 +269,16 @@ export const AdminLayout: React.FC = () => {
   const isMcqActive = location.pathname.startsWith('/mcq-library');
   const isStudyPlansActive = location.pathname.startsWith('/study-plans');
   const isCurrentAffairsActive = location.pathname.startsWith('/current-affairs');
+  const isQuickRevisionActive = location.pathname.startsWith('/quick-revision');
+  const isSubscriptionsActive = location.pathname.startsWith('/subscriptions');
 
   const isExamsOpen = manualExamsOpen !== null ? manualExamsOpen : isExamsActive;
   const isStudyMaterialsOpen = manualStudyMaterialsOpen !== null ? manualStudyMaterialsOpen : isStudyMaterialsActive;
   const isMcqOpen = manualMcqOpen !== null ? manualMcqOpen : isMcqActive;
   const isStudyPlansOpen = manualStudyPlansOpen !== null ? manualStudyPlansOpen : isStudyPlansActive;
   const isCurrentAffairsOpen = manualCurrentAffairsOpen !== null ? manualCurrentAffairsOpen : isCurrentAffairsActive;
+  const isQuickRevisionOpen = manualQuickRevisionOpen !== null ? manualQuickRevisionOpen : isQuickRevisionActive;
+  const isSubscriptionsOpen = manualSubscriptionsOpen !== null ? manualSubscriptionsOpen : isSubscriptionsActive;
 
   // Load user from localStorage
   const storedUserRaw = localStorage.getItem('admin_user');
@@ -235,6 +361,10 @@ export const AdminLayout: React.FC = () => {
                   ? isStudyPlansOpen
                   : item.name === 'Current Affairs'
                   ? isCurrentAffairsOpen
+                  : item.name === 'Quick Revision'
+                  ? isQuickRevisionOpen
+                  : item.name === 'Subscriptions & Payments'
+                  ? isSubscriptionsOpen
                   : true;
 
               const toggleOpen = () => {
@@ -245,6 +375,7 @@ export const AdminLayout: React.FC = () => {
                     setManualStudyMaterialsOpen(false);
                     setManualMcqOpen(false);
                     setManualCurrentAffairsOpen(false);
+                    setManualSubscriptionsOpen(false);
                   }
                 } else if (item.name === 'Study Materials') {
                   const nextState = !isStudyMaterialsOpen;
@@ -253,6 +384,7 @@ export const AdminLayout: React.FC = () => {
                     setManualExamsOpen(false);
                     setManualMcqOpen(false);
                     setManualCurrentAffairsOpen(false);
+                    setManualSubscriptionsOpen(false);
                   }
                 } else if (item.name === 'MCQ Library & Tests') {
                   const nextState = !isMcqOpen;
@@ -261,6 +393,7 @@ export const AdminLayout: React.FC = () => {
                     setManualExamsOpen(false);
                     setManualStudyMaterialsOpen(false);
                     setManualCurrentAffairsOpen(false);
+                    setManualSubscriptionsOpen(false);
                   }
                 } else if (item.name === 'Study Plans') {
                   const nextState = !isStudyPlansOpen;
@@ -270,6 +403,7 @@ export const AdminLayout: React.FC = () => {
                     setManualStudyMaterialsOpen(false);
                     setManualMcqOpen(false);
                     setManualCurrentAffairsOpen(false);
+                    setManualSubscriptionsOpen(false);
                   }
                 } else if (item.name === 'Current Affairs') {
                   const nextState = !isCurrentAffairsOpen;
@@ -279,6 +413,30 @@ export const AdminLayout: React.FC = () => {
                     setManualStudyMaterialsOpen(false);
                     setManualMcqOpen(false);
                     setManualStudyPlansOpen(false);
+                    setManualQuickRevisionOpen(false);
+                    setManualSubscriptionsOpen(false);
+                  }
+                } else if (item.name === 'Quick Revision') {
+                  const nextState = !isQuickRevisionOpen;
+                  setManualQuickRevisionOpen(nextState);
+                  if (nextState) {
+                    setManualExamsOpen(false);
+                    setManualStudyMaterialsOpen(false);
+                    setManualMcqOpen(false);
+                    setManualStudyPlansOpen(false);
+                    setManualCurrentAffairsOpen(false);
+                    setManualSubscriptionsOpen(false);
+                  }
+                } else if (item.name === 'Subscriptions & Payments') {
+                  const nextState = !isSubscriptionsOpen;
+                  setManualSubscriptionsOpen(nextState);
+                  if (nextState) {
+                    setManualExamsOpen(false);
+                    setManualStudyMaterialsOpen(false);
+                    setManualMcqOpen(false);
+                    setManualStudyPlansOpen(false);
+                    setManualCurrentAffairsOpen(false);
+                    setManualQuickRevisionOpen(false);
                   }
                 }
               };
@@ -333,7 +491,15 @@ export const AdminLayout: React.FC = () => {
                 to={item.path}
                 data-tooltip={item.name}
                 className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-                onClick={() => setIsMobileOpen(false)}
+                onClick={() => {
+                  setIsMobileOpen(false);
+                  setManualExamsOpen(false);
+                  setManualStudyMaterialsOpen(false);
+                  setManualMcqOpen(false);
+                  setManualStudyPlansOpen(false);
+                  setManualCurrentAffairsOpen(false);
+                  setManualQuickRevisionOpen(false);
+                }}
               >
                 <Icon className="nav-icon" />
                 <span className="nav-text">{item.name}</span>
@@ -390,9 +556,12 @@ export const AdminLayout: React.FC = () => {
 
         {/* Page Content Outlet */}
         <main className="admin-content">
-          <Outlet />
+          <AdminErrorBoundary>
+            <Outlet />
+          </AdminErrorBoundary>
         </main>
       </div>
     </div>
   );
 };
+

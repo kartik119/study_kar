@@ -47,6 +47,7 @@ router.get(
         where: { accountType: 'STUDENT' },
         include: {
           studentProfile: true,
+          studyPlans: { include: { template: true, examCycle: true, plannerRule: true, tasks: { select: { id: true, actualCompletionDate: true, plannedMinutes: true, completedMinutes: true, studyPlanDay: { select: { date: true } } } } } },
         },
         orderBy: { createdAt: 'desc' },
       });
@@ -79,6 +80,7 @@ router.get(
         include: {
           studentProfile: true,
           guardianConsents: { orderBy: { createdAt: 'desc' } },
+          studyPlans: { include: { template: true, examCycle: true, plannerRule: true, tasks: { select: { id: true, actualCompletionDate: true, plannedMinutes: true, completedMinutes: true, studyPlanDay: { select: { date: true } } } } } },
         },
       });
 

@@ -13,6 +13,28 @@ export function serializeStudent(
   const profile = user.studentProfile || {};
   const dob = profile.dateOfBirth;
 
+  const activePlan = user.studyPlans?.find((p: any) => p.status === 'ACTIVE') || user.studyPlans?.[0];
+  const planName = activePlan ? (activePlan.template?.titleEn || activePlan.plannerRule?.name || activePlan.examCycle?.titleEn || 'Custom Study Plan') : null;
+  const chosenExam = activePlan?.examCycle?.titleEn || null;
+
+  let planDetails = null;
+  if (activePlan) {
+    const tasks = activePlan.tasks || [];
+    const totalTasks = tasks.length;
+    const completedTasks = tasks.filter((t: any) => !!t.actualCompletionDate).length;
+    const overdueTasks = tasks.filter((t: any) => !t.actualCompletionDate && t.studyPlanDay?.date && new Date(t.studyPlanDay.date) < new Date()).length;
+    
+    planDetails = {
+      startDate: activePlan.planStartDate,
+      targetDate: activePlan.examDate || activePlan.estimatedConceptCompletionDate,
+      overallCompletion: totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0,
+      tasksCompleted: completedTasks,
+      tasksPending: totalTasks - completedTasks,
+      overdueTasks: overdueTasks,
+      totalTasks: totalTasks
+    };
+  }
+
   const result: Record<string, unknown> = {
     id: user.id,
     fullName: user.fullName,
@@ -24,6 +46,9 @@ export function serializeStudent(
     preparationLanguageLockedAt: profile.preparationLanguageLockedAt || null,
     profileCompletedAt: profile.profileCompletedAt || null,
     createdAt: user.createdAt,
+    studyPlanName: planName,
+    chosenExam: chosenExam,
+    planDetails: planDetails,
   };
 
   if (dob && canViewDob) {

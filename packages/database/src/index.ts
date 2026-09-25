@@ -2,8 +2,6 @@ import { PrismaClient } from '@prisma/client';
 
 export * from '@prisma/client';
 export * from './seedData';
-export * from './seed';
-export * from './mcq-demo-seed';
 
 let globalPrisma: PrismaClient | undefined;
 

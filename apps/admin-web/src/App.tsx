@@ -1,4 +1,30 @@
-import React from 'react';
+
+import React, { Component, ErrorInfo } from 'react';
+class ErrorBoundary extends Component<{ children: React.ReactNode }, { hasError: boolean, error: Error | null }> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error: Error) { return { hasError: true, error }; }
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) { console.error("Uncaught error:", error, errorInfo); }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: '50px', backgroundColor: '#FEE2E2', color: '#991B1B', height: '100vh' }}>
+          <h1 style={{ fontSize: '24px', fontWeight: 'bold' }}>Something went wrong.</h1>
+          <pre style={{ marginTop: '20px', whiteSpace: 'pre-wrap', wordWrap: 'break-word' }}>
+            {this.state.error && this.state.error.toString()}
+          </pre>
+          <pre style={{ marginTop: '20px', whiteSpace: 'pre-wrap', wordWrap: 'break-word', fontSize: '12px' }}>
+            {this.state.error?.stack}
+          </pre>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AdminLayout } from './components/AdminLayout';
 import { AdminLogin } from './pages/AdminLogin';
@@ -33,17 +59,35 @@ import { CreateRankedTestPage } from './pages/ranked-tests/CreateRankedTestPage'
 import { RankedTestDetailPage } from './pages/ranked-tests/RankedTestDetailPage';
 import { AdminTopicPracticeConfigPage } from './pages/mcq/AdminTopicPracticeConfigPage';
 import { AdminPerformanceAnalyticsPage } from './pages/students/AdminPerformanceAnalyticsPage';
+
+import { TeamMembersPage } from './pages/team/TeamMembersPage';
+import { InviteTeamMemberPage } from './pages/team/InviteTeamMemberPage';
+import { EditTeamMemberPage } from './pages/team/EditTeamMemberPage';
+import { RolesPermissionsPage } from './pages/team/RolesPermissionsPage';
+import { CreateRolePage } from './pages/team/CreateRolePage';
+import { WorkAssignmentsPage, ActivityLogsPage } from './pages/team/TeamPlaceholders';
+
 import {
   DashboardPage,
   StudyPlansPage,
   CurrentAffairsPage,
   QuickRevisionPage,
-  SubscriptionsPage,
-  TeamPage,
   SupportPage,
   SettingsPage,
   NotFoundPage,
 } from './pages/PlaceholderPages';
+import {
+  ModulesPage,
+  ProductsPage,
+  PlansPage,
+  StudentSubscriptionsPage,
+  TransactionsPage,
+  CouponsPage,
+  InvoicesPage,
+  RefundsPage,
+  RazorpayPage,
+  PaymentReportsPage,
+} from './pages/subscriptions';
 import { StudentsListPage } from './pages/students/StudentsListPage';
 import { StudyPlansOverviewPage } from './pages/study-plans/StudyPlansOverviewPage';
 import { PlannerRulesPage } from './pages/study-plans/PlannerRulesPage';
@@ -51,6 +95,7 @@ import { PlanTemplatesPage } from './pages/study-plans/PlanTemplatesPage';
 import { AssignedPlansPage } from './pages/study-plans/AssignedPlansPage';
 import { CreatePlanPage } from './pages/study-plans/CreatePlanPage';
 import { CompletionTrackingPage } from './pages/study-plans/CompletionTrackingPage';
+import { AddCouponPage } from './pages/subscriptions/AddCouponPage';
 import { CurrentAffairsListPage } from './pages/current-affairs/CurrentAffairsListPage';
 import { AddCurrentAffairPage } from './pages/current-affairs/AddCurrentAffairPage';
 import { CurrentAffairsDashboardPage } from './pages/current-affairs/CurrentAffairsDashboardPage';
@@ -58,6 +103,11 @@ import { CurrentAffairsCalendarPage } from './pages/current-affairs/CurrentAffai
 import { CurrentAffairsPdfPage } from './pages/current-affairs/CurrentAffairsPdfPage';
 import { CurrentAffairsQuizPage } from './pages/current-affairs/CurrentAffairsQuizPage';
 import { TrendingTopicsPage } from './pages/current-affairs/TrendingTopicsPage';
+
+import { RevisionLibraryPage } from './pages/quick-revision/RevisionLibraryPage';
+import { QuickRevisionAddCardPage } from './pages/quick-revision/QuickRevisionAddCardPage';
+import { QuickRevisionCategoriesPage } from './pages/quick-revision/QuickRevisionCategoriesPage';
+import { QuickRevisionPlaceholder } from './pages/quick-revision/QuickRevisionPlaceholder';
 import { StudentProfilePage } from './pages/students/StudentProfilePage';
 import { StudentFormPage } from './pages/students/StudentFormPage';
 import { EmptyState } from '@study-karnataka/ui';
@@ -85,7 +135,7 @@ const UnauthorizedPage: React.FC = () => (
 );
 
 export const App: React.FC = () => (
-  <BrowserRouter>
+  <ErrorBoundary><BrowserRouter>
     <Routes>
       <Route path="/login" element={<AdminLogin />} />
       <Route path="/unauthorized" element={<UnauthorizedPage />} />
@@ -176,15 +226,49 @@ export const App: React.FC = () => (
         <Route path="current-affairs/daily-quiz" element={<CurrentAffairsQuizPage />} />
         <Route path="current-affairs/pdfs" element={<CurrentAffairsPdfPage />} />
         <Route path="current-affairs/analytics" element={<StudyMaterialsPlaceholder />} />
-        <Route path="quick-revision" element={<QuickRevisionPage />} />
-        <Route path="subscriptions" element={<SubscriptionsPage />} />
-        <Route path="team" element={<TeamPage />} />
+        {/* Quick Revision Domain Routes */}
+        <Route path="quick-revision">
+          <Route index element={<RevisionLibraryPage />} />
+          <Route path="library" element={<RevisionLibraryPage />} />
+          <Route path="add" element={<QuickRevisionAddCardPage />} />
+          <Route path="edit/:id" element={<QuickRevisionAddCardPage />} />
+          <Route path="categories" element={<QuickRevisionCategoriesPage />} />
+        </Route>
+        {/* Subscriptions & Payments Domain Routes */}
+        <Route path="subscriptions">
+          <Route index element={<Navigate to="modules" replace />} />
+          <Route path="modules" element={<ModulesPage />} />
+          <Route path="products" element={<Navigate to="/subscriptions/modules" replace />} />
+          <Route path="plans" element={<PlansPage />} />
+          <Route path="student-subscriptions" element={<StudentSubscriptionsPage />} />
+          <Route path="transactions" element={<TransactionsPage />} />
+          <Route path="coupons" element={<CouponsPage />} />
+          <Route path="coupons/add" element={<AddCouponPage />} />
+          <Route path="invoices" element={<InvoicesPage />} />
+          <Route path="refunds" element={<RefundsPage />} />
+          <Route path="razorpay" element={<RazorpayPage />} />
+          <Route path="reports" element={<PaymentReportsPage />} />
+          <Route path="payment-reports" element={<PaymentReportsPage />} />
+        </Route>
+        
+        <Route path="team">
+          <Route index element={<Navigate to="members" replace />} />
+          <Route path="members" element={<TeamMembersPage />} />
+          <Route path="members/invite" element={<InviteTeamMemberPage />} />
+          <Route path="members/:id/edit" element={<EditTeamMemberPage />} />
+          <Route path="roles-permissions" element={<RolesPermissionsPage />} />
+          <Route path="roles/create" element={<CreateRolePage />} />
+          <Route path="roles/:id" element={<CreateRolePage />} />
+          <Route path="work-assignments" element={<WorkAssignmentsPage />} />
+          <Route path="activity-logs" element={<ActivityLogsPage />} />
+        </Route>
+
         <Route path="support" element={<SupportPage />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>
-  </BrowserRouter>
+  </BrowserRouter></ErrorBoundary>
 );
 
 export default App;

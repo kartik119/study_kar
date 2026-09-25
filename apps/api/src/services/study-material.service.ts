@@ -219,6 +219,7 @@ export class StudyMaterialService {
             topic: true,
           },
         },
+        examMappings: true,
       },
     });
 
@@ -255,6 +256,7 @@ export class StudyMaterialService {
             topic: true,
           },
         },
+        examMappings: true,
       },
     });
 
@@ -283,6 +285,7 @@ export class StudyMaterialService {
       englishRevision: enRev,
       kannadaRevision: knRev,
       primaryMapping,
+      examCycleIds: targetSm.examMappings ? targetSm.examMappings.map((em) => em.examCycleId) : [],
       hasEnglishLocale: Boolean(enLocale),
       hasKannadaLocale: Boolean(knLocale),
       foundationReadiness: readinessEval.foundationReadiness,
@@ -411,7 +414,15 @@ export class StudyMaterialService {
       await this.addTaxonomyMapping(sm.id, parsed.taxonomyMapping, adminUserId);
     }
 
-
+    if (parsed.examCycleIds && parsed.examCycleIds.length > 0) {
+      await prisma.studyMaterialExamMapping.createMany({
+        data: parsed.examCycleIds.map(examId => ({
+          studyMaterialId: sm.id,
+          examCycleId: examId,
+          createdByAdminId: adminUserId,
+        }))
+      });
+    }
 
     await createAuditLog({
       adminUserId,
@@ -438,16 +449,24 @@ export class StudyMaterialService {
       throw new StudyMaterialError('Study Material system code is immutable and cannot be modified', 'STUDY_MATERIAL_CODE_IMMUTABLE', 400);
     }
 
-    const { academicStageIds, ...dataToUpdate } = parsed;
+    const { academicStageIds, examCycleIds, ...dataToUpdate } = parsed;
 
-    const updated = await prisma.studyMaterial.update({
-      where: { id },
-      data: {
-        ...dataToUpdate,
-        updatedByAdminId: adminUserId,
-        version: { increment: 1 },
-      },
-    });
+    
+
+    if (examCycleIds !== undefined) {
+      await prisma.studyMaterialExamMapping.deleteMany({
+        where: { studyMaterialId: id }
+      });
+      if (examCycleIds && examCycleIds.length > 0) {
+        await prisma.studyMaterialExamMapping.createMany({
+          data: examCycleIds.map(examId => ({
+            studyMaterialId: id,
+            examCycleId: examId,
+            createdByAdminId: adminUserId,
+          }))
+        });
+      }
+    }
 
 
 

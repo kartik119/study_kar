@@ -3,7 +3,8 @@
   "compilerOptions": {
     "target": "ES2022",
     "rootDir": "src",
-    "outDir": "dist"
+    "outDir": "dist",
+    "types": ["node"]
   },
-  "include": ["src/**/*"]
+  "include": ["src/index.ts", "src/seedData.ts"]
 }

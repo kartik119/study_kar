@@ -11,6 +11,7 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
   isLoading?: boolean;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
+  icon?: React.ReactNode;
   children?: React.ReactNode;
 }
 
@@ -20,6 +21,7 @@ export const Button: React.FC<ButtonProps> = ({
   isLoading = false,
   leftIcon,
   rightIcon,
+  icon,
   children,
   disabled,
   style,
@@ -60,7 +62,7 @@ export const Button: React.FC<ButtonProps> = ({
       disabled={disabled || isLoading}
       {...props}
     >
-      {isLoading ? <LoadingSpinner size="sm" /> : leftIcon}
+      {isLoading ? <LoadingSpinner size="sm" /> : (icon || leftIcon)}
       {children}
       {rightIcon}
     </button>
@@ -178,7 +180,7 @@ export const Select: React.FC<SelectProps> = ({ options, style, ...props }) => (
     }}
     {...props}
   >
-    {options.map((opt) => (
+    {(options || []).map((opt) => (
       <option key={opt.value} value={opt.value}>
         {opt.label}
       </option>
@@ -455,7 +457,7 @@ export interface RadioGroupProps {
 
 export const RadioGroup: React.FC<RadioGroupProps> = ({ name, options, selectedValue, onChange }) => (
   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-    {options.map((opt) => (
+    {(options || []).map((opt) => (
       <label
         key={opt.value}
         style={{
@@ -648,6 +650,7 @@ export interface MetricCardProps {
   changeLabel?: string;
   icon?: React.ReactNode;
   badgeText?: string;
+  trend?: { value: any; isPositive?: boolean };
 }
 
 export const MetricCard: React.FC<MetricCardProps> = ({ title, value, changeLabel, icon, badgeText }) => (
@@ -792,10 +795,12 @@ export const Drawer: React.FC<DrawerProps> = ({ isOpen, onClose, title, children
 
 export interface DropdownMenuProps {
   trigger: React.ReactNode;
-  items: { label: string; onClick: () => void; danger?: boolean }[];
+  items: { label: string; onClick: () => void; danger?: boolean; icon?: React.ReactNode }[];
+  direction?: 'up' | 'down' | 'auto';
+  align?: 'left' | 'right' | 'auto';
 }
 
-export const DropdownMenu: React.FC<DropdownMenuProps> = ({ trigger, items }) => {
+export const DropdownMenu: React.FC<DropdownMenuProps> = ({ trigger, items, direction = 'auto', align = 'auto' }) => {
   const [open, setOpen] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const menuRef = React.useRef<HTMLDivElement>(null);
@@ -813,14 +818,18 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({ trigger, items }) =>
       if (containerRef.current) {
         const rect = containerRef.current.getBoundingClientRect();
         const spaceOnRight = window.innerWidth - rect.right;
-        const isRightAligned = spaceOnRight < 120;
-        const estimatedHeight = items.length * 36 + 16;
+        const isRightAligned = align === 'right' ? true : align === 'left' ? false : spaceOnRight < 180;
+        const estimatedHeight = items.length * 40 + 16;
         const spaceBelow = window.innerHeight - rect.bottom;
-        const isUp = spaceBelow < estimatedHeight && rect.top > estimatedHeight;
+        const isUp = direction === 'up' 
+          ? true 
+          : direction === 'down' 
+            ? false 
+            : (spaceBelow < estimatedHeight && rect.top > estimatedHeight);
 
         setCoords({
-          top: rect.bottom + 4,
-          bottom: window.innerHeight - rect.top + 4,
+          top: rect.bottom + 6,
+          bottom: window.innerHeight - rect.top + 6,
           left: rect.left,
           right: window.innerWidth - rect.right,
           isRight: isRightAligned,
@@ -838,7 +847,7 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({ trigger, items }) =>
       window.removeEventListener('scroll', updatePosition, true);
       window.removeEventListener('resize', updatePosition);
     };
-  }, [open]);
+  }, [open, items.length, direction, align]);
 
   return (
     <div ref={containerRef} style={{ position: 'relative', display: 'inline-block' }}>
@@ -853,15 +862,18 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({ trigger, items }) =>
             ...(coords.isRight ? { right: coords.right } : { left: coords.left }),
             ...(coords.isUp ? { bottom: coords.bottom } : { top: coords.top }),
             backgroundColor: '#FFFFFF',
-            borderRadius: radius.control,
+            borderRadius: '8px',
             border: `1px solid ${colors.border}`,
-            boxShadow: shadows.card,
-            minWidth: '120px',
+            boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+            minWidth: '150px',
             zIndex: 9999,
-            padding: '4px 0',
+            padding: '4px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '2px',
           }}
         >
-          {items.map((item, idx) => (
+          {(items || []).map((item, idx) => (
             <button
               key={idx}
               onClick={(e) => {
@@ -872,15 +884,28 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({ trigger, items }) =>
               style={{
                 width: '100%',
                 textAlign: 'left',
-                padding: '8px 14px',
+                padding: '8px 12px',
                 backgroundColor: 'transparent',
                 border: 'none',
-                fontSize: '14px',
+                borderRadius: '6px',
+                fontSize: '13px',
+                fontWeight: 500,
                 color: item.danger ? colors.error : colors.darkHeading,
                 cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                transition: 'background-color 0.15s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = item.danger ? '#FEF2F2' : '#F1F5F9';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
               }}
             >
-              {item.label}
+              {item.icon}
+              <span>{item.label}</span>
             </button>
           ))}
         </div>,
@@ -890,39 +915,85 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({ trigger, items }) =>
   );
 };
 
+
 /* -------------------------------------------------------------------------- */
 /* 6. TABLE, PAGINATION, TABS, BREADCRUMB                                     */
 /* -------------------------------------------------------------------------- */
 export interface TableProps {
-  headers: string[];
-  rows: (string | React.ReactNode)[][];
+  headers?: string[];
+  rows?: (string | React.ReactNode)[][];
+  children?: React.ReactNode;
 }
 
-export const Table: React.FC<TableProps> = ({ headers, rows }) => (
-  <div style={{ overflowX: 'auto', borderRadius: radius.card, border: `1px solid ${colors.border}` }}>
-    <table style={{ width: '100%', borderCollapse: 'collapse', backgroundColor: '#FFFFFF', fontSize: '14px' }}>
-      <thead style={{ backgroundColor: colors.pageBackground, borderBottom: `1px solid ${colors.border}` }}>
-        <tr>
-          {headers.map((h, i) => (
-            <th key={i} style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, color: colors.secondaryText }}>
-              {h}
-            </th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((row, rIdx) => (
-          <tr key={rIdx} style={{ borderBottom: rIdx === rows.length - 1 ? 'none' : `1px solid ${colors.border}` }}>
-            {row.map((cell, cIdx) => (
-              <td key={cIdx} style={{ padding: '12px 16px', color: colors.bodyText }}>
-                {cell}
-              </td>
+export const Table: React.FC<TableProps> & {
+  Header: React.FC<{ children: React.ReactNode }>;
+  Body: React.FC<{ children: React.ReactNode }>;
+  Row: React.FC<{ children: React.ReactNode; className?: string }>;
+  Head: React.FC<{ children: React.ReactNode; className?: string }>;
+  Cell: React.FC<{ children: React.ReactNode; className?: string }>;
+} = ({ headers, rows, children }) => {
+  if (children) {
+    return (
+      <div style={{ overflowX: 'auto', borderRadius: radius.card, border: `1px solid ${colors.border}` }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', backgroundColor: '#FFFFFF', fontSize: '14px' }}>
+          {children}
+        </table>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ overflowX: 'auto', borderRadius: radius.card, border: `1px solid ${colors.border}` }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', backgroundColor: '#FFFFFF', fontSize: '14px' }}>
+        <thead style={{ backgroundColor: colors.pageBackground, borderBottom: `1px solid ${colors.border}` }}>
+          <tr>
+            {(headers || []).map((h, i) => (
+              <th key={i} style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, color: colors.secondaryText }}>
+                {h}
+              </th>
             ))}
           </tr>
-        ))}
-      </tbody>
-    </table>
-  </div>
+        </thead>
+        <tbody>
+          {(rows || []).map((row, rIdx) => (
+            <tr key={rIdx} style={{ borderBottom: rIdx === (rows?.length || 0) - 1 ? 'none' : `1px solid ${colors.border}` }}>
+              {(row || []).map((cell, cIdx) => (
+                <td key={cIdx} style={{ padding: '12px 16px', color: colors.bodyText }}>
+                  {cell}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
+Table.Header = ({ children }) => (
+  <thead style={{ backgroundColor: colors.pageBackground, borderBottom: `1px solid ${colors.border}` }}>
+    {children}
+  </thead>
+);
+
+Table.Body = ({ children }) => <tbody>{children}</tbody>;
+
+Table.Row = ({ children, className }) => (
+  <tr className={className} style={{ borderBottom: `1px solid ${colors.border}` }}>
+    {children}
+  </tr>
+);
+
+Table.Head = ({ children, className }) => (
+  <th className={className} style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, color: colors.secondaryText }}>
+    {children}
+  </th>
+);
+
+Table.Cell = ({ children, className }) => (
+  <td className={className} style={{ padding: '12px 16px', color: colors.bodyText }}>
+    {children}
+  </td>
 );
 
 export interface PaginationProps {
@@ -953,7 +1024,7 @@ export interface TabsProps {
 
 export const Tabs: React.FC<TabsProps> = ({ tabs, activeTab, onTabChange }) => (
   <div style={{ display: 'flex', borderBottom: `1px solid ${colors.border}`, gap: '16px', marginBottom: '16px' }}>
-    {tabs.map((tab) => {
+    {(tabs || []).map((tab) => {
       const isActive = activeTab === tab.id;
       return (
         <button
@@ -986,7 +1057,7 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({ items }) => (
     aria-label="Breadcrumb"
     style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: colors.secondaryText, marginBottom: '12px' }}
   >
-    {items.map((item, idx) => (
+    {(items || []).map((item, idx) => (
       <span key={idx} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
         {idx > 0 && <span>/</span>}
         {item.href ? (
@@ -1042,9 +1113,10 @@ export interface EmptyStateProps {
   description: string;
   actionLabel?: string;
   onAction?: () => void;
+  icon?: React.ReactNode;
 }
 
-export const EmptyState: React.FC<EmptyStateProps> = ({ title, description, actionLabel, onAction }) => (
+export const EmptyState: React.FC<EmptyStateProps> = ({ title, description, actionLabel, onAction, icon }) => (
   <div
     style={{
       padding: '48px 24px',
@@ -1054,7 +1126,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({ title, description, acti
       border: `1px dashed ${colors.border}`,
     }}
   >
-    <div style={{ fontSize: '36px', marginBottom: '12px' }}>📁</div>
+    <div style={{ fontSize: '36px', marginBottom: '12px' }}>{icon || '📁'}</div>
     <h3 style={{ fontSize: '18px', fontWeight: 600, color: colors.darkHeading, margin: '0 0 6px 0' }}>{title}</h3>
     <p style={{ fontSize: '14px', color: colors.secondaryText, maxWidth: '400px', margin: '0 auto 16px auto' }}>
       {description}
@@ -1096,19 +1168,22 @@ export const ErrorState: React.FC<ErrorStateProps> = ({ title = 'Failed to load 
 export interface PageHeaderProps {
   title: string;
   subtitle?: string;
+  description?: string;
   actions?: React.ReactNode;
   breadcrumbItems?: { label: string; href?: string }[];
+  breadcrumb?: { label: string; path?: string }[];
 }
 
-export const PageHeader: React.FC<PageHeaderProps> = ({ title, subtitle, actions, breadcrumbItems }) => (
+export const PageHeader: React.FC<PageHeaderProps> = ({ title, subtitle, description, actions, breadcrumbItems, breadcrumb }) => (
   <div style={{ marginBottom: '24px' }}>
     {breadcrumbItems && <Breadcrumb items={breadcrumbItems} />}
+    {breadcrumb && <Breadcrumb items={breadcrumb.map(b => ({ label: b.label, href: b.path }))} />}
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
       <div>
         <h1 style={{ fontSize: '24px', fontWeight: 700, color: colors.darkHeading, margin: '0 0 4px 0' }}>
           {title}
         </h1>
-        {subtitle && <p style={{ fontSize: '14px', color: colors.secondaryText, margin: 0 }}>{subtitle}</p>}
+        {(subtitle || description) && <p style={{ fontSize: '14px', color: colors.secondaryText, margin: 0 }}>{subtitle || description}</p>}
       </div>
       {actions && <div style={{ display: 'flex', gap: '12px' }}>{actions}</div>}
     </div>

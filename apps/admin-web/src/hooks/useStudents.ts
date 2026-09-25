@@ -13,6 +13,10 @@ export interface Student {
   status: string;
   lastActive: string;
   language?: string;
+  subscriptionType?: string;
+  subscriptionEndDate?: string;
+  assignedMentor?: string;
+  planDetails?: any;
 }
 
 const API_BASE = '/api/v1/admin/students';
@@ -46,14 +50,18 @@ export const useStudents = () => {
           name: user.fullName || 'Unknown',
           email: user.email || 'N/A',
           phone: user.mobile || 'N/A',
-          exam: 'N/A', // Update this based on the student's exam mapping if available
-          plan: 'N/A', // Update this based on the student's plan if available
+          exam: user.chosenExam || 'N/A',
+          plan: user.studyPlanName || 'N/A',
+          planDetails: user.planDetails || null,
           joinDate: new Date(user.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
           progress: 0,
           accuracy: 0,
           status: user.status === 'ACTIVE' ? 'ACTIVE' : user.status === 'SUSPENDED' ? 'INACTIVE' : user.status,
           lastActive: user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString() : 'Never',
           language: profile.preparationLanguage || 'english',
+          subscriptionType: 'Premium',
+          subscriptionEndDate: '2026-11-30',
+          assignedMentor: 'Unassigned',
         };
       });
       setStudents(mapped);

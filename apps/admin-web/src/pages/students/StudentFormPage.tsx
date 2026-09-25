@@ -29,6 +29,9 @@ export const StudentFormPage: React.FC = () => {
     progress: 0,
     accuracy: 0,
     lastActive: '',
+    subscriptionType: 'Free',
+    subscriptionEndDate: '',
+    assignedMentor: 'Unassigned',
   });
 
   const [authorities, setAuthorities] = useState<any[]>([]);
@@ -53,6 +56,9 @@ export const StudentFormPage: React.FC = () => {
           progress: student.progress || 0,
           accuracy: student.accuracy || 0,
           lastActive: student.lastActive || '',
+          subscriptionType: student.subscriptionType || 'Free',
+          subscriptionEndDate: student.subscriptionEndDate || '',
+          assignedMentor: student.assignedMentor || 'Unassigned',
         });
       }
     }
@@ -192,6 +198,39 @@ export const StudentFormPage: React.FC = () => {
               placeholder="e.g., 12/09/2026, 10:30:00" 
               value={formData.lastActive}
               onChange={(e) => handleChange('lastActive', e.target.value)}
+            />
+          </FormField>
+
+          <FormField label="Subscription Type">
+            <Select 
+              value={formData.subscriptionType}
+              onChange={(e) => handleChange('subscriptionType', e.target.value)}
+              options={[
+                { label: 'Free', value: 'Free' },
+                { label: 'Premium', value: 'Premium' },
+                { label: 'Trial', value: 'Trial' },
+              ]}
+            />
+          </FormField>
+
+          <FormField label="Subscription End Date">
+            <Input 
+              type="date" 
+              value={formData.subscriptionEndDate}
+              onChange={(e) => handleChange('subscriptionEndDate', e.target.value)}
+            />
+          </FormField>
+
+          <FormField label="Assigned Mentor">
+            <Select 
+              value={formData.assignedMentor}
+              onChange={(e) => handleChange('assignedMentor', e.target.value)}
+              options={[
+                { label: 'Unassigned', value: 'Unassigned' },
+                { label: 'Rahul M (Mentor)', value: 'Rahul M (Mentor)' },
+                { label: 'Priya K (Mentor)', value: 'Priya K (Mentor)' },
+                { label: 'Amit S (Mentor)', value: 'Amit S (Mentor)' },
+              ]}
             />
           </FormField>
 

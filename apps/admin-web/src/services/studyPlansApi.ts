@@ -8,6 +8,13 @@ const getHeaders = () => {
   };
 };
 
+export const fetchStudyPlanStats = async () => {
+  const response = await fetch(`${API_BASE_URL}/stats`, { headers: getHeaders() });
+  if (!response.ok) throw new Error('Failed to fetch stats');
+  const data = await response.json();
+  return data.data;
+};
+
 export const fetchStudyPlannerRules = async () => {
   const response = await fetch(`${API_BASE_URL}/rules`, { headers: getHeaders() });
   if (!response.ok) throw new Error('Failed to fetch rules');

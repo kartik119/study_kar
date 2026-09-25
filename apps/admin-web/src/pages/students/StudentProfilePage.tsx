@@ -113,7 +113,11 @@ export const StudentProfilePage: React.FC = () => {
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ color: '#64748B', fontSize: '14px' }}>Subscription</span>
-                  <span style={{ fontWeight: 500, fontSize: '14px' }}>Premium (Ends Nov 2026)</span>
+                  <span style={{ fontWeight: 500, fontSize: '14px' }}>{student.subscriptionType || 'Free'} {student.subscriptionEndDate ? `(Ends ${student.subscriptionEndDate})` : ''}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#64748B', fontSize: '14px' }}>Assigned Mentor</span>
+                  <span style={{ fontWeight: 500, fontSize: '14px' }}>{student.assignedMentor || 'Unassigned'}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ color: '#64748B', fontSize: '14px' }}>Last Active</span>
@@ -122,32 +126,27 @@ export const StudentProfilePage: React.FC = () => {
               </div>
             </Card>
 
-            <Card title="Subject Performance" style={{ flex: '2 1 400px' }}>
+            <Card title="Task Progress" style={{ flex: '2 1 400px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                  <div style={{ width: '120px', fontSize: '14px', fontWeight: 500 }}>Indian Polity</div>
+                  <div style={{ width: '120px', fontSize: '14px', fontWeight: 500 }}>Concepts</div>
                   {renderProgressBar(student.progress === 0 ? 0 : Math.min(100, Math.floor(82 * (student.progress / 70))))}
                   <div style={{ width: '40px', textAlign: 'right', fontSize: '14px', fontWeight: 600 }}>{student.progress === 0 ? 0 : Math.min(100, Math.floor(82 * (student.progress / 70)))}%</div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                  <div style={{ width: '120px', fontSize: '14px', fontWeight: 500 }}>History</div>
-                  {renderProgressBar(student.progress === 0 ? 0 : Math.min(100, Math.floor(64 * (student.progress / 70))))}
-                  <div style={{ width: '40px', textAlign: 'right', fontSize: '14px', fontWeight: 600 }}>{student.progress === 0 ? 0 : Math.min(100, Math.floor(64 * (student.progress / 70)))}%</div>
+                  <div style={{ width: '120px', fontSize: '14px', fontWeight: 500 }}>Revision</div>
+                  {renderProgressBar(student.progress === 0 ? 0 : Math.min(100, Math.floor(48 * (student.progress / 70))))}
+                  <div style={{ width: '40px', textAlign: 'right', fontSize: '14px', fontWeight: 600 }}>{student.progress === 0 ? 0 : Math.min(100, Math.floor(48 * (student.progress / 70)))}%</div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                  <div style={{ width: '120px', fontSize: '14px', fontWeight: 500 }}>Economy</div>
-                  {renderProgressBar(student.progress === 0 ? 0 : Math.min(100, Math.floor(42 * (student.progress / 70))))}
-                  <div style={{ width: '40px', textAlign: 'right', fontSize: '14px', fontWeight: 600 }}>{student.progress === 0 ? 0 : Math.min(100, Math.floor(42 * (student.progress / 70)))}%</div>
+                  <div style={{ width: '120px', fontSize: '14px', fontWeight: 500 }}>MCQ Practice</div>
+                  {renderProgressBar(student.progress === 0 ? 0 : Math.min(100, Math.floor(80 * (student.progress / 70))))}
+                  <div style={{ width: '40px', textAlign: 'right', fontSize: '14px', fontWeight: 600 }}>{student.progress === 0 ? 0 : Math.min(100, Math.floor(80 * (student.progress / 70)))}%</div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                  <div style={{ width: '120px', fontSize: '14px', fontWeight: 500 }}>Environment</div>
-                  {renderProgressBar(student.progress === 0 ? 0 : Math.min(100, Math.floor(72 * (student.progress / 70))))}
-                  <div style={{ width: '40px', textAlign: 'right', fontSize: '14px', fontWeight: 600 }}>{student.progress === 0 ? 0 : Math.min(100, Math.floor(72 * (student.progress / 70)))}%</div>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                  <div style={{ width: '120px', fontSize: '14px', fontWeight: 500 }}>Karnataka GK</div>
-                  {renderProgressBar(student.progress === 0 ? 0 : Math.min(100, Math.floor(35 * (student.progress / 70))))}
-                  <div style={{ width: '40px', textAlign: 'right', fontSize: '14px', fontWeight: 600 }}>{student.progress === 0 ? 0 : Math.min(100, Math.floor(35 * (student.progress / 70)))}%</div>
+                  <div style={{ width: '120px', fontSize: '14px', fontWeight: 500 }}>Current Affairs</div>
+                  {renderProgressBar(student.progress === 0 ? 0 : Math.min(100, Math.floor(55 * (student.progress / 70))))}
+                  <div style={{ width: '40px', textAlign: 'right', fontSize: '14px', fontWeight: 600 }}>{student.progress === 0 ? 0 : Math.min(100, Math.floor(55 * (student.progress / 70)))}%</div>
                 </div>
               </div>
             </Card>
@@ -193,16 +192,122 @@ export const StudentProfilePage: React.FC = () => {
         )}
 
         {activeTab === 'plan' && (
-          <Card title={`Current Plan: ${student.plan || 'None'}`}>
-             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-                <MetricCard title="Plan Start Date" value="24 Aug 2026" />
-                <MetricCard title="Plan Target Date" value="21 Nov 2026" />
-                <MetricCard title="Overall Completion" value={`${student.progress}%`} />
-                <MetricCard title="Tasks Completed" value={student.progress === 0 ? '0' : Math.floor(student.progress * 1.5)} />
-                <MetricCard title="Tasks Pending" value={student.progress === 0 ? '200' : Math.floor(200 - (student.progress * 1.5))} />
-                <MetricCard title="Overdue Tasks" value={student.progress === 0 ? '0' : Math.floor(student.progress / 20)} badgeText={student.progress === 0 ? undefined : "Action Required"} />
-             </div>
-             <Button>View Full Plan</Button>
+          <Card title={`Current Plan: ${student.plan && student.plan !== 'N/A' ? student.plan : 'None'}`}>
+            {(!student.plan || student.plan === 'N/A') ? (
+              <div style={{ color: '#64748B', padding: '20px 0' }}>No study plan assigned to this student.</div>
+            ) : (
+              <>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '32px' }}>
+                  <MetricCard title="Plan Start Date" value={student.planDetails?.startDate ? new Date(student.planDetails.startDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'} />
+                  <MetricCard title="Plan Target Date" value={student.planDetails?.targetDate ? new Date(student.planDetails.targetDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'} />
+                  <MetricCard title="Overall Completion" value={`${student.planDetails?.overallCompletion || 0}%`} />
+                  <MetricCard title="Tasks Completed" value={student.planDetails?.tasksCompleted || 0} />
+                  <MetricCard title="Tasks Pending" value={student.planDetails?.tasksPending || 0} />
+                  <MetricCard title="Overdue Tasks" value={student.planDetails?.overdueTasks || 0} badgeText={student.planDetails?.overdueTasks > 0 ? "Action Required" : undefined} />
+                </div>
+
+                <div style={{ marginBottom: '32px' }}>
+                  <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '16px' }}>Daily Target Distribution</h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '16px' }}>
+                    <div style={{ padding: '16px', border: '1px solid #E2E8F0', borderRadius: '8px', backgroundColor: '#F8FAFC' }}>
+                      <div style={{ fontSize: '13px', color: '#64748B', marginBottom: '8px' }}>Concepts</div>
+                      <div style={{ fontSize: '18px', fontWeight: 500, color: '#3B82F6' }}>120 mins</div>
+                    </div>
+                    <div style={{ padding: '16px', border: '1px solid #E2E8F0', borderRadius: '8px', backgroundColor: '#FFFFFF' }}>
+                      <div style={{ fontSize: '13px', color: '#64748B', marginBottom: '8px' }}>Topics/Day</div>
+                      <div style={{ fontSize: '18px', fontWeight: 500, color: '#0F172A' }}>1 topics</div>
+                    </div>
+                    <div style={{ padding: '16px', border: '1px solid #E2E8F0', borderRadius: '8px', backgroundColor: '#F0FDF4' }}>
+                      <div style={{ fontSize: '13px', color: '#64748B', marginBottom: '8px' }}>Revision</div>
+                      <div style={{ fontSize: '18px', fontWeight: 500, color: '#10B981' }}>60 mins</div>
+                    </div>
+                    <div style={{ padding: '16px', border: '1px solid #E2E8F0', borderRadius: '8px', backgroundColor: '#FFFBEB' }}>
+                      <div style={{ fontSize: '13px', color: '#64748B', marginBottom: '8px' }}>MCQs</div>
+                      <div style={{ fontSize: '18px', fontWeight: 500, color: '#F59E0B' }}>15 mins</div>
+                    </div>
+                    <div style={{ padding: '16px', border: '1px solid #E2E8F0', borderRadius: '8px', backgroundColor: '#FAF5FF' }}>
+                      <div style={{ fontSize: '13px', color: '#64748B', marginBottom: '8px' }}>Current Affairs</div>
+                      <div style={{ fontSize: '18px', fontWeight: 500, color: '#A855F7' }}>45 mins</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <h3 style={{ fontSize: '16px', fontWeight: 600, margin: 0 }}>Full Study Schedule</h3>
+                    <select style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid #E2E8F0', fontSize: '14px', backgroundColor: '#fff' }}>
+                      <option>Bilingual</option>
+                      <option>English</option>
+                      <option>Kannada</option>
+                    </select>
+                  </div>
+                  <Button variant="outline">Enable Edit Mode</Button>
+                </div>
+
+                <div style={{ borderTop: '1px solid #E2E8F0', paddingTop: '24px' }}>
+                  <h4 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '20px', color: '#0F172A' }}>October 2026</h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: '600px', overflowY: 'auto', paddingRight: '8px' }}>
+                    {Array.from({ length: 30 }).map((_, i) => {
+                      const date = new Date(student.planDetails?.startDate || '2026-10-21');
+                      date.setDate(date.getDate() + i);
+                      
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      const currentDay = new Date(date);
+                      currentDay.setHours(0, 0, 0, 0);
+                      
+                      let statusText = 'Pending';
+                      let bg = '#F1F5F9';
+                      let color = '#64748B';
+                      let icon = '⏳';
+                      
+                      if (currentDay < today) {
+                        statusText = 'Completed';
+                        bg = '#DCFCE7';
+                        color = '#166534';
+                        icon = '✅';
+                      } else if (currentDay.getTime() === today.getTime()) {
+                        statusText = 'In Progress';
+                        bg = '#DBEAFE';
+                        color = '#1E40AF';
+                        icon = '🔄';
+                      }
+
+                      return (
+                        <div key={i} style={{ padding: '20px', border: '1px solid #E2E8F0', borderRadius: '8px', backgroundColor: '#FFFFFF', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                            <div style={{ fontSize: '15px', fontWeight: 600, color: '#334155' }}>
+                              Day {i + 1} - {date.toLocaleDateString('en-GB')}
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '9999px', fontSize: '12px', fontWeight: 500, backgroundColor: bg, color: color }}>
+                              <span>{icon}</span> {statusText}
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '14px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span style={{ color: currentDay < today ? '#10B981' : '#E2E8F0', fontSize: '16px' }}>{currentDay < today ? '✓' : '○'}</span>
+                              <span><span style={{ color: '#3B82F6', fontWeight: 600, textDecoration: currentDay < today ? 'line-through' : 'none' }}>120m Concept:</span> <span style={{ color: '#475569', textDecoration: currentDay < today ? 'line-through' : 'none' }}>{i % 2 === 0 ? 'National Current Affairs | ರಾಷ್ಟ್ರೀಯ ಪ್ರಚಲಿತ ವಿದ್ಯಮಾನಗಳು' : 'International Current Affairs | ಅಂತರರಾಷ್ಟ್ರೀಯ ಪ್ರಚಲಿತ ವಿದ್ಯಮಾನಗಳು'}</span></span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span style={{ color: currentDay < today ? '#10B981' : '#E2E8F0', fontSize: '16px' }}>{currentDay < today ? '✓' : '○'}</span>
+                              <span style={{ color: '#10B981', fontWeight: 600, textDecoration: currentDay < today ? 'line-through' : 'none' }}>60m Revision</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span style={{ color: currentDay < today ? '#10B981' : '#E2E8F0', fontSize: '16px' }}>{currentDay < today ? '✓' : '○'}</span>
+                              <span style={{ color: '#F59E0B', fontWeight: 600, textDecoration: currentDay < today ? 'line-through' : 'none' }}>15m MCQ Practice</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span style={{ color: currentDay < today ? '#10B981' : '#E2E8F0', fontSize: '16px' }}>{currentDay < today ? '✓' : '○'}</span>
+                              <span style={{ color: '#A855F7', fontWeight: 600, textDecoration: currentDay < today ? 'line-through' : 'none' }}>45m Current Affairs</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </>
+            )}
           </Card>
         )}
 

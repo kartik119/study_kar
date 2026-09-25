@@ -80,10 +80,10 @@ export class CurrentAffairsService {
         slug,
         createdByAdminId: adminUserId,
         updatedByAdminId: adminUserId,
-        exams: exams ? { create: exams.map((examId: string) => ({ examCycleId: examId })) } : undefined,
-        stages: stages ? { create: stages.map((stageId: string) => ({ examStageId: stageId })) } : undefined,
-        categoriesMapped: subjects ? { create: subjects.map((catId: string) => ({ categoryId: catId })) } : undefined,
-        topicsMapped: topics ? { create: topics.map((topId: string) => ({ topicId: topId })) } : undefined,
+        exams: exams && exams.length > 0 ? { create: exams.map((examId: string) => ({ examCycleId: examId })) } : undefined,
+        stages: stages && stages.length > 0 ? { create: stages.map((stageId: string) => ({ examStageId: stageId })) } : undefined,
+        categoriesMapped: subjects && subjects.length > 0 ? { create: subjects.map((catId: string) => ({ categoryId: catId })) } : undefined,
+        topicsMapped: topics && topics.length > 0 ? { create: topics.map((topId: string) => ({ topicId: topId })) } : undefined,
       },
     });
   }
@@ -95,18 +95,18 @@ export class CurrentAffairsService {
     return prisma.$transaction(async (tx) => {
       if (exams) await tx.currentAffairExam.deleteMany({ where: { currentAffairId: id } });
       if (stages) await tx.currentAffairStage.deleteMany({ where: { currentAffairId: id } });
-      if (subjects) await tx.currentAffairany.deleteMany({ where: { currentAffairId: id } });
-      if (topics) await tx.currentAffairany.deleteMany({ where: { currentAffairId: id } });
+      if (subjects) await tx.currentAffairStudyMaterialCategory.deleteMany({ where: { currentAffairId: id } });
+      if (topics) await tx.currentAffairStudyMaterialTopic.deleteMany({ where: { currentAffairId: id } });
 
       return tx.currentAffair.update({
         where: { id },
         data: {
           ...rest,
           updatedByAdminId: adminUserId,
-          exams: exams ? { create: exams.map((eid: string) => ({ examCycleId: eid })) } : undefined,
-          stages: stages ? { create: stages.map((sid: string) => ({ examStageId: sid })) } : undefined,
-          categoriesMapped: subjects ? { create: subjects.map((cid: string) => ({ categoryId: cid })) } : undefined,
-          topicsMapped: topics ? { create: topics.map((tid: string) => ({ topicId: tid })) } : undefined,
+          exams: exams && exams.length > 0 ? { create: exams.map((eid: string) => ({ examCycleId: eid })) } : undefined,
+          stages: stages && stages.length > 0 ? { create: stages.map((sid: string) => ({ examStageId: sid })) } : undefined,
+          categoriesMapped: subjects && subjects.length > 0 ? { create: subjects.map((cid: string) => ({ categoryId: cid })) } : undefined,
+          topicsMapped: topics && topics.length > 0 ? { create: topics.map((tid: string) => ({ topicId: tid })) } : undefined,
         },
       });
     });

@@ -10,6 +10,33 @@ const router = Router();
 const prisma = new PrismaClient();
 
 // ==========================================
+// STATS
+// ==========================================
+
+router.get('/stats', async (req, res) => {
+  try {
+    const totalPlans = await prisma.studentStudyPlan.count();
+    const activePlans = await prisma.studentStudyPlan.count({
+      where: { status: 'ACTIVE' }
+    });
+    const tightPlans = await prisma.studentStudyPlan.count({
+      where: { coverageStatus: { in: ['TIGHT_COVERAGE', 'COMPRESSED_COVERAGE'] } }
+    });
+    
+    res.json({
+      success: true,
+      data: {
+        totalPlans,
+        activePlans,
+        tightPlans
+      }
+    });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ==========================================
 // RULES
 // ==========================================
 

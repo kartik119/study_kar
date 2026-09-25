@@ -1,10 +1,24 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, Badge } from '@study-karnataka/ui';
 import { CalendarCheck, Settings, Users, BookOpen, Layers } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { fetchStudyPlanStats } from '../../services/studyPlansApi';
 
 export const StudyPlansOverviewPage: React.FC = () => {
   const navigate = useNavigate();
+  const [stats, setStats] = useState({ totalPlans: 0, activePlans: 0, tightPlans: 0 });
+
+  useEffect(() => {
+    const loadStats = async () => {
+      try {
+        const data = await fetchStudyPlanStats();
+        setStats(data);
+      } catch (err) {
+        console.error('Failed to load stats', err);
+      }
+    };
+    loadStats();
+  }, []);
 
   const handleNavigate = (path: string) => {
     navigate(path);
@@ -27,7 +41,7 @@ export const StudyPlansOverviewPage: React.FC = () => {
           </div>
           <div>
             <div style={{ fontSize: '14px', color: '#64748b', fontWeight: 500 }}>Active Student Plans</div>
-            <div style={{ fontSize: '28px', fontWeight: 700, color: '#0F172A', marginTop: '4px' }}>0</div>
+            <div style={{ fontSize: '28px', fontWeight: 700, color: '#0F172A', marginTop: '4px' }}>{stats.activePlans}</div>
           </div>
         </Card>
 
@@ -37,7 +51,7 @@ export const StudyPlansOverviewPage: React.FC = () => {
           </div>
           <div>
             <div style={{ fontSize: '14px', color: '#64748b', fontWeight: 500 }}>Total Plans Created</div>
-            <div style={{ fontSize: '28px', fontWeight: 700, color: '#0F172A', marginTop: '4px' }}>0</div>
+            <div style={{ fontSize: '28px', fontWeight: 700, color: '#0F172A', marginTop: '4px' }}>{stats.totalPlans}</div>
           </div>
         </Card>
 
@@ -47,7 +61,7 @@ export const StudyPlansOverviewPage: React.FC = () => {
           </div>
           <div>
             <div style={{ fontSize: '14px', color: '#64748b', fontWeight: 500 }}>Plans with Tight Coverage</div>
-            <div style={{ fontSize: '28px', fontWeight: 700, color: '#0F172A', marginTop: '4px' }}>0</div>
+            <div style={{ fontSize: '28px', fontWeight: 700, color: '#0F172A', marginTop: '4px' }}>{stats.tightPlans}</div>
           </div>
         </Card>
       </div>

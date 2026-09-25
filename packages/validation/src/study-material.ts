@@ -140,6 +140,7 @@ export const createStudyMaterialSchema = z.object({
     })
     .optional(),
   academicStageIds: z.array(z.string().uuid()).optional().nullable(),
+  examCycleIds: z.array(z.string().uuid()).optional().nullable(),
 });
 
 export const updateStudyMaterialSchema = z.object({
@@ -148,6 +149,7 @@ export const updateStudyMaterialSchema = z.object({
   logoUrl: z.string().optional().nullable(),
   version: z.number().int().optional(),
   academicStageIds: z.array(z.string().uuid()).optional().nullable(),
+  examCycleIds: z.array(z.string().uuid()).optional().nullable(),
 });
 
 export const saveStudyMaterialLocaleSchema = z.object({

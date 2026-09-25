@@ -1,4 +1,5 @@
 import { z } from 'zod';
+export { z };
 
 // Regex Rules
 export const INDIAN_MOBILE_REGEX = /^[6-9]\d{9}$/;

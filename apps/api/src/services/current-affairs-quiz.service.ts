@@ -3,7 +3,7 @@ import { prisma } from '@study-karnataka/database';
 import { CurrentAffairsError } from './current-affairs.service';
 
 export class CurrentAffairsQuizService {
-  static async listQuizzes(filters: any) {
+  static async listQuizzes(filters: any): Promise<any> {
     const { page = 1, pageSize = 20 } = filters;
     const skip = (page - 1) * pageSize;
 
@@ -26,13 +26,13 @@ export class CurrentAffairsQuizService {
     };
   }
 
-  static async getById(id: string) {
+  static async getById(id: string): Promise<any> {
     const item = await prisma.mcqQuestion.findUnique({ where: { id }, include: { currentAffair: true } });
     if (!item) throw new CurrentAffairsError('Quiz question not found', 'NOT_FOUND', 404);
     return item;
   }
 
-  static async create(data: any, adminUserId: string) {
+  static async create(data: any, adminUserId: string): Promise<any> {
     return prisma.mcqQuestion.create({
       data: {
         ...data,
@@ -42,7 +42,7 @@ export class CurrentAffairsQuizService {
     });
   }
 
-  static async update(id: string, data: any, adminUserId: string) {
+  static async update(id: string, data: any, adminUserId: string): Promise<any> {
     return prisma.mcqQuestion.update({
       where: { id },
       data: {
@@ -52,7 +52,7 @@ export class CurrentAffairsQuizService {
     });
   }
 
-  static async delete(id: string) {
+  static async delete(id: string): Promise<any> {
     return prisma.mcqQuestion.delete({ where: { id } });
   }
 }
