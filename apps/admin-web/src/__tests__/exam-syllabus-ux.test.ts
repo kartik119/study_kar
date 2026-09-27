@@ -21,6 +21,7 @@ describe('Exam Syllabus UX Polish & Admin Shell Expansion', () => {
     expect(subNames).toEqual([
       'All Exams',
       'Add Exam',
+      'Exam Stages',
       'Exam Syllabus',
     ]);
   });

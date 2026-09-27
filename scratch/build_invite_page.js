@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
+const fs = require('fs');
+
+const code = `import React, { useState, useEffect } from 'react';
 import { PageHeader, Card, Input, Button, Badge } from '@study-karnataka/ui';
 import { useTeam } from '../../hooks/useTeam';
 import { useRoles } from '../../hooks/useRoles';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Check, X, User, Shield, Info, Send, Save, Eye, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Check, X, User, Shield, Info, Send, Save, Eye } from 'lucide-react';
 
 export const InviteTeamMemberPage: React.FC = () => {
   const navigate = useNavigate();
@@ -396,7 +398,7 @@ export const InviteTeamMemberPage: React.FC = () => {
                       <p style={{ fontSize: '13px', color: '#64748B', margin: 0 }}>{selectedRole.description || 'System configured role.'}</p>
                     </div>
                   </div>
-                  <Button variant="outline" size="sm" onClick={() => window.open(`/team/roles-permissions/${selectedRole.id}`, '_blank')}>View Role Details</Button>
+                  <Button variant="outline" size="sm" onClick={() => window.open(\`/team/roles-permissions/\${selectedRole.id}\`, '_blank')}>View Role Details</Button>
                 </div>
                 
                 <div style={{ marginBottom: '24px' }}>
@@ -460,10 +462,7 @@ export const InviteTeamMemberPage: React.FC = () => {
                     value={formData.welcomeMessage} 
                     onChange={handleChange} 
                     maxLength={500}
-                    placeholder="Hi Meera,
-
-You have been invited to join Study Karnataka.
-Please set up your account using the secure link in this email."
+                    placeholder="Hi Meera,\n\nYou have been invited to join Study Karnataka.\nPlease set up your account using the secure link in this email."
                     style={{ width: '100%', height: '100px', padding: '12px', borderRadius: '6px', border: '1px solid #E2E8F0', outline: 'none', fontSize: '14px', resize: 'vertical', fontFamily: 'inherit' }}
                   />
                 </div>
@@ -633,3 +632,15 @@ Please set up your account using the secure link in this email."
     </div>
   );
 };
+`;
+
+const ChevronDownSVG = `
+const ChevronDown = ({ size = 24, color = "currentColor" }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="6 9 12 15 18 9"></polyline>
+  </svg>
+);
+`;
+
+fs.writeFileSync('apps/admin-web/src/pages/team/InviteTeamMemberPage.tsx', code);
+console.log('InviteTeamMemberPage written');

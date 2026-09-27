@@ -11,6 +11,6 @@ describe('Admin Web Exam Navigation & Submenu Shell', () => {
 
   it('defines required submenus under Exams module', () => {
     const names = EXAM_SUBMENU.map((s) => s.name);
-    expect(names).toEqual(['All Exams', 'Add Exam', 'Exam Syllabus']);
+    expect(names).toEqual(['All Exams', 'Add Exam', 'Exam Stages', 'Exam Syllabus']);
   });
 });

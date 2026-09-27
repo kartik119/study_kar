@@ -7,7 +7,7 @@
     "dev": "pnpm --parallel --filter \"./apps/*\" dev",
     "build": "pnpm --filter \"./packages/*\" build && pnpm --filter \"./apps/*\" build",
     "lint": "pnpm --recursive lint",
-    "type-check": "pnpm --recursive type-check", 
+    "type-check": "pnpm --recursive type-check",
     "typecheck": "pnpm --recursive type-check",
     "test": "pnpm --recursive test",
     "format": "prettier --write \"**/*.{ts,tsx,js,json,md,css}\"",
@@ -34,5 +34,8 @@
   "packageManager": "pnpm@11.9.0",
   "engines": {
     "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.19.3"
   }
 }

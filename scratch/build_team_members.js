@@ -1,14 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import { PageHeader, Card, Button, Badge } from '@study-karnataka/ui';
+const fs = require('fs');
+
+const code = `import React, { useState, useEffect, useMemo } from 'react';
+import { PageHeader, Card, Input, Button, Badge, Table } from '@study-karnataka/ui';
 import { useTeam } from '../../hooks/useTeam';
 import { useRoles } from '../../hooks/useRoles';
 import { useNavigate } from 'react-router-dom';
-import { Search, Plus, Users, Shield, UserCheck, UserX, MoreHorizontal, ChevronLeft, ChevronRight, Eye, Edit, Ban, RefreshCw, Trash2, Mail, XSquare, Clock } from 'lucide-react';
+import { Search, Plus, Filter, Users, Shield, UserCheck, UserX, MoreHorizontal, ChevronLeft, ChevronRight, Check } from 'lucide-react';
 import { MemberDetailsDrawer } from './MemberDetailsDrawer';
 
 export const TeamMembersPage: React.FC = () => {
   const navigate = useNavigate();
-  const { members, kpis, fetchMembers, fetchKPIs, loading, suspendMember, reactivateMember, deactivateMember, resendInvite, cancelInvite } = useTeam();
+  const { members, kpi, fetchMembers, fetchKPIs, isLoading, error } = useTeam();
   const { roles, fetchRoles } = useRoles();
 
   const [search, setSearch] = useState('');
@@ -22,7 +24,6 @@ export const TeamMembersPage: React.FC = () => {
   
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState<any>(null);
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
 
@@ -93,12 +94,6 @@ export const TeamMembersPage: React.FC = () => {
     return 'gray';
   };
   
-  useEffect(() => {
-    const closeMenu = () => setOpenMenuId(null);
-    document.addEventListener('click', closeMenu);
-    return () => document.removeEventListener('click', closeMenu);
-  }, []);
-
   const openDetails = (member: any) => {
     setSelectedMember(member);
     setIsDrawerOpen(true);
@@ -314,7 +309,7 @@ export const TeamMembersPage: React.FC = () => {
                     
                     return (
                       <tr key={member.id} style={{ borderBottom: '1px solid #E2E8F0', backgroundColor: isSelected ? '#F0F9FF' : '#fff', cursor: 'pointer' }} onClick={(e) => {
-                        if ((e.target as HTMLElement).closest('input[type="checkbox"]') || (e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('.actions-menu')) return;
+                        if ((e.target as HTMLElement).closest('input[type="checkbox"]') || (e.target as HTMLElement).closest('button')) return;
                         openDetails(member);
                       }}>
                         <td style={{ padding: '16px' }}>
@@ -378,77 +373,10 @@ export const TeamMembersPage: React.FC = () => {
                         <td style={{ padding: '16px', color: '#475569', fontSize: '13px' }}>
                           {member.status === 'PENDING_INVITE' || member.status === 'Pending Invite' ? 'Invitation Pending' : member.lastActive || 'Never'}
                         </td>
-                        <td style={{ padding: '16px', textAlign: 'center', position: 'relative' }}>
-                          <div className="actions-menu" style={{ display: 'inline-block' }} onClick={(e) => { e.stopPropagation(); }}>
-                            <Button 
-                              variant="ghost" 
-                              style={{ padding: '6px' }} 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setOpenMenuId(openMenuId === member.id ? null : member.id);
-                              }}
-                            >
-                              <MoreHorizontal size={18} color="#64748B" />
-                            </Button>
-                            
-                            {openMenuId === member.id && (
-                              <div style={{
-                                position: 'absolute',
-                                right: '16px',
-                                top: '50px',
-                                backgroundColor: '#fff',
-                                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-                                border: '1px solid #E2E8F0',
-                                borderRadius: '8px',
-                                zIndex: 50,
-                                minWidth: '180px',
-                                textAlign: 'left',
-                                padding: '8px 0'
-                              }}>
-                                <div style={{ padding: '8px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#334155' }} onClick={() => { setOpenMenuId(null); openDetails(member); }} onMouseOver={e => e.currentTarget.style.backgroundColor = '#F8FAFC'} onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}>
-                                  <Eye size={16} /> View Details
-                                </div>
-                                <div style={{ padding: '8px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#334155' }} onClick={() => setOpenMenuId(null)} onMouseOver={e => e.currentTarget.style.backgroundColor = '#F8FAFC'} onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}>
-                                  <Edit size={16} /> Edit Member
-                                </div>
-                                <div style={{ padding: '8px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#334155' }} onClick={() => setOpenMenuId(null)} onMouseOver={e => e.currentTarget.style.backgroundColor = '#F8FAFC'} onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}>
-                                  <Shield size={16} /> Edit Scope
-                                </div>
-                                <div style={{ padding: '8px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#334155' }} onClick={() => setOpenMenuId(null)} onMouseOver={e => e.currentTarget.style.backgroundColor = '#F8FAFC'} onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}>
-                                  <Clock size={16} /> View Activity
-                                </div>
-                                
-                                <div style={{ height: '1px', backgroundColor: '#E2E8F0', margin: '4px 0' }} />
-                                
-                                {member.status === 'ACTIVE' && (
-                                  <div style={{ padding: '8px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#EAB308' }} onClick={async () => { setOpenMenuId(null); await suspendMember(member.id); loadData(); }} onMouseOver={e => e.currentTarget.style.backgroundColor = '#FEFCE8'} onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}>
-                                    <Ban size={16} /> Suspend Member
-                                  </div>
-                                )}
-                                {(member.status === 'SUSPENDED' || member.status === 'INACTIVE') && (
-                                  <div style={{ padding: '8px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#10B981' }} onClick={async () => { setOpenMenuId(null); await reactivateMember(member.id); loadData(); }} onMouseOver={e => e.currentTarget.style.backgroundColor = '#ECFDF5'} onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}>
-                                    <RefreshCw size={16} /> Reactivate
-                                  </div>
-                                )}
-                                {(member.status === 'PENDING_INVITE' || member.status === 'Pending Invite') && (
-                                  <>
-                                    <div style={{ padding: '8px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#3B82F6' }} onClick={async () => { setOpenMenuId(null); await resendInvite(member.id); }} onMouseOver={e => e.currentTarget.style.backgroundColor = '#EFF6FF'} onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}>
-                                      <Mail size={16} /> Resend Invite
-                                    </div>
-                                    <div style={{ padding: '8px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#EF4444' }} onClick={async () => { setOpenMenuId(null); await cancelInvite(member.id); loadData(); }} onMouseOver={e => e.currentTarget.style.backgroundColor = '#FEF2F2'} onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}>
-                                      <XSquare size={16} /> Cancel Invite
-                                    </div>
-                                  </>
-                                )}
-                                
-                                {member.status !== 'PENDING_INVITE' && member.status !== 'Pending Invite' && (
-                                  <div style={{ padding: '8px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#EF4444' }} onClick={async () => { setOpenMenuId(null); await deactivateMember(member.id); loadData(); }} onMouseOver={e => e.currentTarget.style.backgroundColor = '#FEF2F2'} onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}>
-                                    <Trash2 size={16} /> Deactivate
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </div>
+                        <td style={{ padding: '16px', textAlign: 'center' }}>
+                          <Button variant="ghost" style={{ padding: '6px' }}>
+                            <MoreHorizontal size={18} color="#64748B" />
+                          </Button>
                         </td>
                       </tr>
                     );
@@ -460,7 +388,7 @@ export const TeamMembersPage: React.FC = () => {
             {/* 7. Pagination */}
             <div style={{ padding: '16px 24px', borderTop: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fff' }}>
               <div style={{ color: '#64748B', fontSize: '14px' }}>
-                Showing {(page - 1) * limit + 1} to {Math.min(page * limit, kpi?.total || members.length)} of {kpi?.total || members.length} team members
+                Showing {(page - 1) * limit + 1} to Math.min(page * limit, kpi?.total || members.length) of {kpi?.total || members.length} team members
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -497,8 +425,12 @@ export const TeamMembersPage: React.FC = () => {
       <MemberDetailsDrawer 
         isOpen={isDrawerOpen} 
         onClose={() => setIsDrawerOpen(false)} 
-        memberId={selectedMember?.id} 
+        member={selectedMember} 
       />
     </div>
   );
 };
+`;
+
+fs.writeFileSync('apps/admin-web/src/pages/team/TeamMembersPage.tsx', code);
+console.log('TeamMembersPage written');

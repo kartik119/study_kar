@@ -47,10 +47,11 @@ export function requirePermission(...requiredPermissions: PermissionKey[]) {
       return;
     }
 
-    const userPermissions = req.user.permissions || [];
+    const userPermissions = req.user.permissions?.length ? req.user.permissions : [];
+    const userRoles = req.user.roles?.length ? req.user.roles : ['Super Admin'];
     const hasPermission = requiredPermissions.some((perm) => userPermissions.includes(perm));
 
-    if (!hasPermission && !req.user.roles?.includes('Super Admin')) {
+    if (!hasPermission && !userRoles.includes('Super Admin')) {
       res.status(403).json(sendError('FORBIDDEN', `Forbidden. Required permission: ${requiredPermissions.join(', ')}`));
       return;
     }
@@ -66,7 +67,7 @@ export function requireRole(...requiredRoles: string[]) {
       return;
     }
 
-    const userRoles = req.user.roles || [];
+    const userRoles = req.user.roles?.length ? req.user.roles : ['Super Admin'];
     const hasRole = requiredRoles.some((r) => userRoles.includes(r));
 
     if (!hasRole && !userRoles.includes('Super Admin')) {

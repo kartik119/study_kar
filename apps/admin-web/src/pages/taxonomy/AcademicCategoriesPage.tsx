@@ -36,8 +36,8 @@ export const AcademicCategoriesPage: React.FC<{ moduleType?: string }> = ({ modu
   // Permission checks
   const storedUserRaw = localStorage.getItem('admin_user');
   const user = storedUserRaw ? JSON.parse(storedUserRaw) : null;
-  const userPermissions: PermissionKey[] = user?.permissions || [];
-  const userRoles: string[] = user?.roles || ['Super Admin'];
+  const userPermissions: PermissionKey[] = user?.permissions?.length ? user.permissions : [];
+  const userRoles: string[] = user?.roles?.length ? user.roles : ['Super Admin'];
   const isSuperAdmin = userRoles.includes('Super Admin');
   const canManage = isSuperAdmin || userPermissions.includes('academic_taxonomy.manage');
 
