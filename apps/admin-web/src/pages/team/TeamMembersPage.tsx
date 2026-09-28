@@ -10,8 +10,9 @@ import { EditScopeDrawer } from './EditScopeDrawer';
 
 export const TeamMembersPage: React.FC = () => {
   const navigate = useNavigate();
-  const { members, kpis, fetchMembers, fetchKPIs, loading, suspendMember, reactivateMember, deactivateMember, resendInvite, cancelInvite } = useTeam();
+  const { members, kpi, fetchMembers, fetchKPIs, loading, suspendMember, reactivateMember, deactivateMember, resendInvite, cancelInvite } = useTeam();
   const { roles, fetchRoles } = useRoles();
+  const error = null;
 
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('All Roles');

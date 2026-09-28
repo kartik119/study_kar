@@ -10,12 +10,14 @@ interface RoleDetailsDrawerProps {
 }
 
 export const RoleDetailsDrawer: React.FC<RoleDetailsDrawerProps> = ({ roleId, isOpen, onClose }) => {
-  const { getRole, loading } = useRoles();
+  const { getRole, getRoleActivity, loading } = useRoles();
   const [role, setRole] = React.useState<any>(null);
+  const [activities, setActivities] = React.useState<any[]>([]);
 
   useEffect(() => {
     if (roleId && isOpen) {
       getRole(roleId).then(data => setRole(data));
+      getRoleActivity(roleId).then(data => setActivities(data?.data || []));
     }
   }, [roleId, isOpen]);
 
@@ -46,10 +48,6 @@ export const RoleDetailsDrawer: React.FC<RoleDetailsDrawerProps> = ({ roleId, is
                     <p style={{ margin: '4px 0 0 0', color: '#1E293B' }}>{role.description || 'No description provided.'}</p>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                    <div>
-                      <label style={{ fontSize: '13px', fontWeight: 500, color: '#64748B' }}>Scope Policy</label>
-                      <p style={{ margin: '4px 0 0 0', color: '#1E293B' }}>{role.scopePolicy}</p>
-                    </div>
                     <div>
                       <label style={{ fontSize: '13px', fontWeight: 500, color: '#64748B' }}>Permission Count</label>
                       <p style={{ margin: '4px 0 0 0', color: '#1E293B' }}>{role.permissions?.length || 0}</p>
@@ -85,6 +83,35 @@ export const RoleDetailsDrawer: React.FC<RoleDetailsDrawerProps> = ({ roleId, is
               )
             },
             {
+              label: 'Scope Policy',
+              children: (
+                <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div style={{ backgroundColor: '#F8FAFC', padding: '16px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                    <h5 style={{ margin: '0 0 8px 0', fontSize: '14px', fontWeight: 600, color: '#1E293B' }}>Global Scope Policy</h5>
+                    <p style={{ margin: 0, color: '#475569', fontSize: '14px' }}>{role.scopePolicy || 'No policy defined'}</p>
+                  </div>
+                  {role.scopePolicy === 'RESTRICTED' && (
+                    <div style={{ backgroundColor: '#FFFBEB', padding: '16px', borderRadius: '8px', border: '1px solid #FDE68A' }}>
+                      <h5 style={{ margin: '0 0 8px 0', fontSize: '14px', fontWeight: 600, color: '#92400E' }}>Restriction Rules</h5>
+                      <ul style={{ margin: 0, paddingLeft: '20px', color: '#92400E', fontSize: '13px' }}>
+                        {role.restrictions?.map((r: string, i: number) => (
+                          <li key={i}>{r}</li>
+                        )) || <li>No explicit restrictions listed.</li>}
+                      </ul>
+                    </div>
+                  )}
+                  <div style={{ backgroundColor: '#F0F9FF', padding: '16px', borderRadius: '8px', border: '1px solid #BAE6FD' }}>
+                    <h5 style={{ margin: '0 0 8px 0', fontSize: '14px', fontWeight: 600, color: '#0369A1' }}>Module Access</h5>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                      {role.modules?.map((m: string) => (
+                        <Badge key={m} variant="blue">{m}</Badge>
+                      )) || <span style={{ color: '#0369A1', fontSize: '13px' }}>No modules allowed</span>}
+                    </div>
+                  </div>
+                </div>
+              )
+            },
+            {
               label: 'Assigned Members',
               children: (
                 <div style={{ marginTop: '24px' }}>
@@ -100,6 +127,32 @@ export const RoleDetailsDrawer: React.FC<RoleDetailsDrawerProps> = ({ roleId, is
                     />
                   ) : (
                     <p style={{ color: '#64748B' }}>No members currently assigned to this role.</p>
+                  )}
+                </div>
+              )
+            },
+            {
+              label: 'Activity',
+              children: (
+                <div style={{ marginTop: '24px' }}>
+                  {activities && activities.length > 0 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      {activities.map((act: any) => (
+                        <div key={act.id} style={{ padding: '12px', border: '1px solid #E2E8F0', borderRadius: '8px', backgroundColor: '#F8FAFC' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                            <Badge variant="blue">{act.action}</Badge>
+                            <span style={{ fontSize: '12px', color: '#64748B' }}>
+                              {new Date(act.createdAt).toLocaleString()}
+                            </span>
+                          </div>
+                          <p style={{ margin: 0, fontSize: '14px', color: '#1E293B' }}>
+                            Performed by: <span style={{ fontWeight: 600 }}>{act.adminUser?.fullName || 'System'}</span>
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p style={{ color: '#64748B' }}>No recent activity for this role.</p>
                   )}
                 </div>
               )

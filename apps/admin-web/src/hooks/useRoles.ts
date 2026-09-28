@@ -33,6 +33,17 @@ export const useRoles = () => {
     }
   };
 
+  const getRoleActivity = async (id: string, page = 1, limit = 10) => {
+    try {
+      const res = await teamApi.getRoleActivity(id, page, limit);
+      if (res.success) return res.data;
+      return null;
+    } catch (error) {
+      console.error('Failed to fetch role activity', error);
+      return null;
+    }
+  };
+
   const createRole = async (data: any) => {
     try {
       const res = await teamApi.createRole(data);
@@ -75,6 +86,7 @@ export const useRoles = () => {
     loading,
     fetchRoles,
     getRole,
+    getRoleActivity,
     createRole,
     updateRole,
     fetchPermissions

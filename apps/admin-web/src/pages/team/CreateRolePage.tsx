@@ -40,6 +40,7 @@ export const CreateRolePage: React.FC = () => {
   const [activeModuleTab, setActiveModuleTab] = useState<string | null>(null);
   const [restrictions, setRestrictions] = useState<Set<string>>(new Set());
   const [scopePolicy, setScopePolicy] = useState('ASSIGNED_ITEMS_ONLY');
+  const [assignedMemberCount, setAssignedMemberCount] = useState<number>(0);
 
   useEffect(() => {
     fetchPermissions();
@@ -55,6 +56,7 @@ export const CreateRolePage: React.FC = () => {
       setRoleCode(role.code);
       setDescription(role.description || '');
       setScopePolicy(role.scopePolicy || 'ALL_DATA');
+      setAssignedMemberCount(role.assignedMembers?.length || 0);
       
       const actions = new Set<string>();
       const mods = new Set<string>();
@@ -215,6 +217,17 @@ export const CreateRolePage: React.FC = () => {
             ]}
           />
         </div>
+
+        {id && assignedMemberCount > 0 && (
+          <div style={{ backgroundColor: '#FEF3C7', border: '1px solid #F59E0B', borderRadius: '8px', padding: '16px', display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '24px' }}>
+            <div style={{ backgroundColor: '#F59E0B', color: 'white', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ fontWeight: 'bold' }}>!</span>
+            </div>
+            <p style={{ margin: 0, color: '#92400E', fontSize: '14px', fontWeight: 500 }}>
+              This role is assigned to {assignedMemberCount} team members. Permission changes will affect all assigned members.
+            </p>
+          </div>
+        )}
 
         <div style={{ display: 'flex', gap: '24px', alignItems: 'flex-start' }}>
           

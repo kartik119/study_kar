@@ -5,14 +5,14 @@ import { teamApi, TeamMemberQuery, InviteMemberData } from '../api/team.api';
 export const useTeam = () => {
   const [members, setMembers] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
-  const [kpis, setKpis] = useState<any>({ total: 0, active: 0, suspended: 0, roleCount: 0 });
+  const [kpi, setKpi] = useState<any>({ total: 0, active: 0, suspended: 0, roleCount: 0 });
   const [loading, setLoading] = useState(false);
 
   const fetchKPIs = useCallback(async () => {
     try {
       const res = await teamApi.getKPIs();
       if (res.success) {
-        setKpis(res.data);
+        setKpi(res.data);
       }
     } catch (error) {
       console.error('Failed to fetch team KPIs', error);
@@ -145,7 +145,7 @@ export const useTeam = () => {
   return {
     members,
     total,
-    kpis,
+    kpi,
     loading,
     fetchKPIs,
     fetchMembers,

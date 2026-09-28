@@ -63,5 +63,17 @@ export class TeamRoleController {
       next(error);
     }
   };
+
+  getRoleActivity = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const id = (req.params.id as string) as string;
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+      const result = await this.roleService.getRoleActivity(id, page, limit);
+      res.status(200).json(sendSuccess(result, 'Role activity fetched successfully'));
+    } catch (error) {
+      next(error);
+    }
+  };
 }
 

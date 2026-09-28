@@ -19,6 +19,7 @@ router.get('/roles', teamRoleController.listRoles);
 router.get('/permissions', teamRoleController.getAllPermissions);
 router.post('/roles', teamRoleController.createRole);
 router.get('/roles/:id', teamRoleController.getRoleDetails);
+router.get('/roles/:id/activity', teamRoleController.getRoleActivity);
 router.put('/roles/:id', teamRoleController.updateRole);
 
 // Team Members API

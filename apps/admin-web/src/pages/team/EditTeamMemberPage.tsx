@@ -411,6 +411,11 @@ export const EditTeamMemberPage: React.FC = () => {
                   </div>
                 </div>
 
+                <div style={{ marginBottom: '24px' }}>
+                  <h5 style={{ fontSize: '14px', fontWeight: 600, color: '#334155', margin: '0 0 4px 0' }}>Scope Policy</h5>
+                  <p style={{ fontSize: '13px', color: '#64748B', margin: 0 }}>{selectedRole.scopePolicy || 'No policy defined'}</p>
+                </div>
+
                 <div style={{ backgroundColor: '#F8FAFC', borderRadius: '8px', padding: '16px', border: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
                   <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                     <Shield size={18} color="#64748B" />

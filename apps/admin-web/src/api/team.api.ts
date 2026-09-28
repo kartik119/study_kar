@@ -105,6 +105,10 @@ export const teamApi = {
     return await fetchWithAuth(`${API_BASE}/roles/${id}`);
   },
 
+  getRoleActivity: async (id: string, page = 1, limit = 10) => {
+    return await fetchWithAuth(`${API_BASE}/roles/${id}/activity?page=${page}&limit=${limit}`);
+  },
+
   createRole: async (data: any) => {
     return await fetchWithAuth(`${API_BASE}/roles`, {
       method: 'POST',

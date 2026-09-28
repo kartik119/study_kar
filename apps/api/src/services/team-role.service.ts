@@ -205,4 +205,30 @@ export class TeamRoleService {
   async getAllPermissions() {
     return prisma.permission.findMany();
   }
+
+  async getRoleActivity(id: string, page = 1, limit = 10) {
+    const skip = (page - 1) * limit;
+    const activities = await prisma.adminAuditLog.findMany({
+      where: { recordType: 'Role', recordId: id },
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: limit,
+      include: {
+        adminUser: {
+          select: { fullName: true, email: true }
+        }
+      }
+    });
+
+    const total = await prisma.adminAuditLog.count({
+      where: { recordType: 'Role', recordId: id }
+    });
+
+    return {
+      data: activities,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit)
+    };
+  }
 }

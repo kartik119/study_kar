@@ -4,10 +4,11 @@ import { PageHeader, Card, Input, Button, Badge } from '@study-karnataka/ui';
 import { useRoles } from '../../hooks/useRoles';
 import { useNavigate } from 'react-router-dom';
 import { Search, Plus, Shield, ShieldCheck, Key, Grid, MoreHorizontal, ChevronLeft, ChevronRight, Eye, Edit, Copy, Users, Power, PowerOff, Trash2 } from 'lucide-react';
+import { RoleDetailsDrawer } from './RoleDetailsDrawer';
 
 export const RolesPermissionsPage: React.FC = () => {
   const navigate = useNavigate();
-  const { roles, kpis, loading, fetchRoles } = useRoles();
+  const { roles, kpis, loading, fetchRoles, updateRole } = useRoles();
 
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('All Types');
@@ -19,6 +20,9 @@ export const RolesPermissionsPage: React.FC = () => {
   
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
+  
+  const [drawerRoleId, setDrawerRoleId] = useState<string | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   useEffect(() => {
     fetchRoles();
@@ -63,6 +67,26 @@ export const RolesPermissionsPage: React.FC = () => {
     } else {
       setSelectedRows(new Set(roles.map(r => r.id)));
     }
+  };
+
+  const handleToggleStatus = async (role: any) => {
+    const success = await updateRole(role.id, {
+      name: role.name,
+      code: role.code,
+      description: role.description,
+      scopePolicy: role.scopePolicy,
+      isActive: !role.isActive
+    });
+    if (success) {
+      loadData();
+    }
+    setOpenMenuId(null);
+  };
+
+  const openDrawer = (id: string) => {
+    setDrawerRoleId(id);
+    setIsDrawerOpen(true);
+    setOpenMenuId(null);
   };
 
   useEffect(() => {
@@ -313,17 +337,17 @@ export const RolesPermissionsPage: React.FC = () => {
                       
                       {openMenuId === role.id && (
                         <div style={{ position: 'absolute', right: '30px', top: '40px', backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', border: '1px solid #E2E8F0', zIndex: 10, width: '220px', padding: '8px', textAlign: 'left' }}>
-                          <button onClick={() => navigate(`/team/roles/${role.id}`)} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', background: 'none', border: 'none', cursor: 'pointer', color: '#1E293B', fontSize: '14px', borderRadius: '4px' }}><Eye size={16} /> View Details</button>
+                          <button onClick={() => openDrawer(role.id)} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', background: 'none', border: 'none', cursor: 'pointer', color: '#1E293B', fontSize: '14px', borderRadius: '4px' }}><Eye size={16} /> View Details</button>
                           <button onClick={() => navigate(`/team/roles/${role.id}`)} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', background: 'none', border: 'none', cursor: 'pointer', color: '#1E293B', fontSize: '14px', borderRadius: '4px' }}><Edit size={16} /> Edit Role</button>
                           <button style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', background: 'none', border: 'none', cursor: 'pointer', color: '#1E293B', fontSize: '14px', borderRadius: '4px' }}><Copy size={16} /> Duplicate Role</button>
-                          <button style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', background: 'none', border: 'none', cursor: 'pointer', color: '#1E293B', fontSize: '14px', borderRadius: '4px' }}><Users size={16} /> View Assigned Members</button>
+                          <button onClick={() => openDrawer(role.id)} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', background: 'none', border: 'none', cursor: 'pointer', color: '#1E293B', fontSize: '14px', borderRadius: '4px' }}><Users size={16} /> View Assigned Members</button>
                           
                           <div style={{ height: '1px', backgroundColor: '#E2E8F0', margin: '4px 0' }}></div>
                           
                           {role.isActive ? (
-                            <button style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', background: 'none', border: 'none', cursor: 'pointer', color: '#F59E0B', fontSize: '14px', borderRadius: '4px' }}><PowerOff size={16} /> Deactivate</button>
+                            <button onClick={() => handleToggleStatus(role)} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', background: 'none', border: 'none', cursor: 'pointer', color: '#F59E0B', fontSize: '14px', borderRadius: '4px' }}><PowerOff size={16} /> Deactivate</button>
                           ) : (
-                            <button style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', background: 'none', border: 'none', cursor: 'pointer', color: '#10B981', fontSize: '14px', borderRadius: '4px' }}><Power size={16} /> Activate</button>
+                            <button onClick={() => handleToggleStatus(role)} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', background: 'none', border: 'none', cursor: 'pointer', color: '#10B981', fontSize: '14px', borderRadius: '4px' }}><Power size={16} /> Activate</button>
                           )}
                           
                           {!role.isSystem && (
@@ -381,6 +405,12 @@ export const RolesPermissionsPage: React.FC = () => {
           </div>
         )}
       </Card>
+      
+      <RoleDetailsDrawer 
+        roleId={drawerRoleId} 
+        isOpen={isDrawerOpen} 
+        onClose={() => setIsDrawerOpen(false)} 
+      />
     </div>
   );
 };
