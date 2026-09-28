@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { CouponAdminService } from '../services/coupon.admin.service';
 
-const router = Router();
+const router: import('express').Router = Router();
 
 router.get('/metrics', async (req, res, next) => {
   try {

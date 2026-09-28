@@ -572,11 +572,14 @@ export const Switch: React.FC<SwitchProps> = ({ checked, onChange, label, disabl
 /* 3. BADGES & STATUS BADGES                                                  */
 /* -------------------------------------------------------------------------- */
 export interface BadgeProps {
-  label: string;
+  label?: string;
+  children?: React.ReactNode;
   variant?: 'info' | 'success' | 'warning' | 'error' | 'neutral';
+  color?: string;
+  style?: React.CSSProperties;
 }
 
-export const Badge: React.FC<BadgeProps> = ({ label, variant = 'info' }) => {
+export const Badge: React.FC<BadgeProps> = ({ label, children, variant = 'info', color, style }) => {
   const styles: Record<string, React.CSSProperties> = {
     info: { backgroundColor: colors.softBlue, color: colors.info },
     success: { backgroundColor: colors.softGreen, color: colors.success },
@@ -584,6 +587,10 @@ export const Badge: React.FC<BadgeProps> = ({ label, variant = 'info' }) => {
     error: { backgroundColor: colors.softRed, color: colors.primaryRed },
     neutral: { backgroundColor: colors.pageBackground, color: colors.secondaryText },
   };
+
+  const dynamicStyle = color 
+    ? { backgroundColor: `${color}20`, color: color }
+    : styles[variant];
 
   return (
     <span
@@ -594,10 +601,11 @@ export const Badge: React.FC<BadgeProps> = ({ label, variant = 'info' }) => {
         fontSize: '12px',
         fontWeight: 600,
         whiteSpace: 'nowrap',
-        ...styles[variant],
+        ...dynamicStyle,
+        ...style
       }}
     >
-      {label}
+      {children || label}
     </span>
   );
 };
@@ -759,10 +767,18 @@ export interface DrawerProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
+  size?: 'sm' | 'md' | 'lg' | 'xl' | string;
 }
 
-export const Drawer: React.FC<DrawerProps> = ({ isOpen, onClose, title, children }) => {
+export const Drawer: React.FC<DrawerProps> = ({ isOpen, onClose, title, children, size = '320px' }) => {
   if (!isOpen) return null;
+  
+  let width = size;
+  if (size === 'sm') width = '280px';
+  else if (size === 'md') width = '400px';
+  else if (size === 'lg') width = '600px';
+  else if (size === 'xl') width = '800px';
+
   return (
     <div
       style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(17, 24, 39, 0.5)', zIndex: 90 }}
@@ -774,10 +790,11 @@ export const Drawer: React.FC<DrawerProps> = ({ isOpen, onClose, title, children
           top: 0,
           bottom: 0,
           right: 0,
-          width: '320px',
+          width,
           backgroundColor: '#FFFFFF',
           padding: '20px',
           boxShadow: shadows.lg,
+          overflowY: 'auto'
         }}
         onClick={(e) => e.stopPropagation()}
       >

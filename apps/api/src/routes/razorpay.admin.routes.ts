@@ -2,7 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { authenticateToken, AuthenticatedRequest } from '../middleware/auth';
 import { RazorpayAdminService } from '../services/razorpay.admin.service';
 
-export const razorpayAdminRouter = Router();
+export const razorpayAdminRouter: import('express').Router = Router();
 
 // Protect all admin razorpay endpoints
 razorpayAdminRouter.use(authenticateToken);
@@ -189,7 +189,7 @@ razorpayAdminRouter.post(
 // PUBLIC WEBHOOK ROUTE (Razorpay calls this directly)
 // -----------------------------------------------------------------------------
 
-export const razorpayWebhookRouter = Router();
+export const razorpayWebhookRouter: import('express').Router = Router();
 
 razorpayWebhookRouter.post('/', async (req: Request, res: Response) => {
   const signature = req.headers['x-razorpay-signature'] as string;

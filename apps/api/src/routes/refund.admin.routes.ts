@@ -57,7 +57,7 @@ router.get('/export', async (req: AuthenticatedRequest, res: Response) => {
 // GET /api/v1/admin/subscriptions/refunds/refundable-amount/:transactionId
 router.get('/refundable-amount/:transactionId', async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const data = await RefundAdminService.calculateRemainingRefundableAmount(req.params.transactionId);
+    const data = await RefundAdminService.calculateRemainingRefundableAmount(req.params.transactionId as string);
     res.json({
       success: true,
       data,
@@ -70,7 +70,7 @@ router.get('/refundable-amount/:transactionId', async (req: AuthenticatedRequest
 // POST /api/v1/admin/subscriptions/refunds (Request a refund)
 router.post('/', async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const actor = req.user ? { id: req.user.userId, name: req.user.email || 'Admin' } : undefined;
+    const actor = req.user ? { id: req.user.userId, name: 'Admin' } : undefined;
     const refund = await RefundAdminService.requestRefund(req.body, actor);
     res.status(201).json({
       success: true,
@@ -85,8 +85,8 @@ router.post('/', async (req: AuthenticatedRequest, res: Response) => {
 // POST /api/v1/admin/subscriptions/refunds/:id/approve
 router.post('/:id/approve', async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const actor = { id: req.user?.userId || 'admin', name: req.user?.email || 'Admin' };
-    const refund = await RefundAdminService.approveRefund(req.params.id, actor);
+    const actor = { id: req.user?.userId || 'admin', name: 'Admin' };
+    const refund = await RefundAdminService.approveRefund(((req.params.id as string) as string), actor);
     res.json({
       success: true,
       data: refund,
@@ -107,9 +107,9 @@ router.post('/:id/reject', async (req: AuthenticatedRequest, res: Response) => {
         error: { message: 'Rejection reason is mandatory to reject a refund request' },
       });
     }
-    const actor = { id: req.user?.userId || 'admin', name: req.user?.email || 'Admin' };
+    const actor = { id: req.user?.userId || 'admin', name: 'Admin' };
     const refund = await RefundAdminService.rejectRefund(
-      req.params.id,
+      ((req.params.id as string) as string),
       rejectionReason,
       internalNotes,
       actor
@@ -127,8 +127,8 @@ router.post('/:id/reject', async (req: AuthenticatedRequest, res: Response) => {
 // POST /api/v1/admin/subscriptions/refunds/:id/process
 router.post('/:id/process', async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const actor = { id: req.user?.userId || 'admin', name: req.user?.email || 'Admin' };
-    const refund = await RefundAdminService.processRefund(req.params.id, actor, req.body);
+    const actor = { id: req.user?.userId || 'admin', name: 'Admin' };
+    const refund = await RefundAdminService.processRefund(((req.params.id as string) as string), actor, req.body);
     res.json({
       success: true,
       data: refund,
@@ -142,7 +142,7 @@ router.post('/:id/process', async (req: AuthenticatedRequest, res: Response) => 
 // GET /api/v1/admin/subscriptions/refunds/:id
 router.get('/:id', async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const refund = await RefundAdminService.getRefundById(req.params.id);
+    const refund = await RefundAdminService.getRefundById(((req.params.id as string) as string));
     if (!refund) {
       return res.status(404).json({
         success: false,
@@ -172,3 +172,4 @@ router.get('/', async (req: AuthenticatedRequest, res: Response) => {
 });
 
 export default router;
+

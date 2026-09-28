@@ -60,6 +60,10 @@ export const teamApi = {
     return await fetchWithAuth(`${API_BASE}/members/${id}`);
   },
 
+  getMemberActivity: async (id: string, page = 1, limit = 10) => {
+    return await fetchWithAuth(`${API_BASE}/members/${id}/activity?page=${page}&limit=${limit}`);
+  },
+
   inviteMember: async (data: InviteMemberData) => {
     return await fetchWithAuth(`${API_BASE}/invite`, {
       method: 'POST',

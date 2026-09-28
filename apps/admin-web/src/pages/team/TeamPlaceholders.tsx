@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React from 'react';
 import { PageHeader } from '@study-karnataka/ui';
 

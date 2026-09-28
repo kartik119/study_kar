@@ -1,4 +1,7 @@
 import { PrismaClient, AccountStatus } from '@study-karnataka/database';
+import { sendInvitationEmail } from '../utils/email.service';
+import crypto from 'crypto';
+import { hashToken } from '../utils/crypto';
 
 const prisma = new PrismaClient();
 
@@ -16,16 +19,12 @@ export class TeamService {
         { adminProfile: { employeeId: { contains: search, mode: 'insensitive' } } },
       ];
     }
+    
     if (status && status !== 'all' && status !== 'All Status') {
-      if (status.toUpperCase() === 'PENDING INVITE') {
-        where.accountStatus = 'INACTIVE'; // Need better status tracking for invite, maybe we use a flag or just accountStatus
-      } else {
-        where.accountStatus = status.toUpperCase();
-      }
+      where.accountStatus = status.toUpperCase();
     }
 
     if (role && role !== 'all' && role !== 'All Roles') {
-      // AdminRole -> Role -> name
       where.adminRoles = {
         some: {
           role: {
@@ -60,13 +59,10 @@ export class TeamService {
       })
     ]);
 
-    // Return format mapped to frontend expectations
     const formattedMembers = members.map(m => {
-      // Find the primary role
       const primaryRole = m.adminRoles[0]?.role?.name || 'Admin';
-      
       let mappedStatus = m.accountStatus as string;
-      if (m.accountStatus === 'INACTIVE' && !m.lastLoginAt) {
+      if (mappedStatus === 'PENDING_INVITE') {
         mappedStatus = 'Pending Invite';
       }
 
@@ -96,7 +92,7 @@ export class TeamService {
 
   async getKPIs() {
     const [total, active, suspended, roleCount] = await Promise.all([
-      prisma.adminUser.count(),
+      prisma.adminUser.count({ where: { accountStatus: { not: 'PENDING_INVITE' } } }),
       prisma.adminUser.count({ where: { accountStatus: 'ACTIVE' } }),
       prisma.adminUser.count({ where: { accountStatus: 'SUSPENDED' } }),
       prisma.role.count()
@@ -112,13 +108,12 @@ export class TeamService {
   async inviteMember(data: any, inviterId: string) {
     const { 
       fullName, email, phone, employeeId, department, designation,
-      roleId, role, // Accept either
-      adminModuleAccess, // Array of module codes
-      examScope, // Array of exam programme IDs
+      roleId, role,
+      adminModuleAccess,
+      examScope,
       mentorSettings 
     } = data;
 
-    // Resolve Role ID
     let roleRecord;
     if (roleId) {
       roleRecord = await prisma.role.findUnique({ where: { id: roleId } });
@@ -130,7 +125,6 @@ export class TeamService {
       throw new Error(`Role not found or not specified.`);
     }
 
-    // Resolve Exam Programme IDs
     const validExamScopes: string[] = [];
     if (examScope && Array.isArray(examScope)) {
       for (const examName of examScope) {
@@ -147,13 +141,11 @@ export class TeamService {
       }
     }
 
-    // Check if email already exists
     const existingUser = await prisma.adminUser.findUnique({ where: { email } });
     if (existingUser) {
       throw new Error(`A team member with the email ${email} already exists.`);
     }
 
-    // Check if employee ID already exists
     const empIdStr = employeeId?.trim() || null;
     if (empIdStr) {
       const existingProfile = await prisma.adminProfile.findFirst({ where: { employeeId: empIdStr } });
@@ -162,64 +154,84 @@ export class TeamService {
       }
     }
 
-    // Create Admin User
-    const adminUser = await prisma.adminUser.create({
-      data: {
-        email,
-        fullName,
-        passwordHash: 'pending', // Pending activation
-        accountStatus: 'INACTIVE',
-        isActive: false,
-        adminRoles: {
-          create: {
-            roleId: roleRecord.id
-          }
-        },
-        adminProfile: {
-          create: {
-            phone,
-            employeeId: empIdStr,
-            department,
-            designation,
-          }
-        },
-        moduleAccess: adminModuleAccess ? {
-          create: adminModuleAccess.map((code: string) => ({ moduleCode: code }))
-        } : undefined,
-        examScopes: validExamScopes.length > 0 ? {
-          create: validExamScopes.map((id: string) => ({ examProgrammeId: id }))
-        } : undefined,
-        mentorProfile: (role === 'Mentor' && mentorSettings) ? {
-          create: {
-            mentorshipMode: mentorSettings.mentorshipMode || 'BOTH',
-            maxCapacity: mentorSettings.maxCapacity ? parseInt(mentorSettings.maxCapacity) : null,
-            activeStudentCount: 0
-          }
-        } : undefined
-      }
-    });
-
-    // TODO: Generate invitation token, send email. (Placeholder for now)
-    
-    // Audit Log
     let finalInviterId = inviterId;
     if (!finalInviterId) {
       const fallbackAdmin = await prisma.adminUser.findFirst();
       if (fallbackAdmin) finalInviterId = fallbackAdmin.id;
     }
 
-    if (finalInviterId) {
-      await prisma.adminAuditLog.create({
+    const adminUser = await prisma.$transaction(async (tx) => {
+      const user = await tx.adminUser.create({
+        data: {
+          email,
+          fullName,
+          passwordHash: 'pending',
+          accountStatus: 'PENDING_INVITE',
+          isActive: false,
+          adminRoles: {
+            create: { roleId: roleRecord.id }
+          },
+          adminProfile: {
+            create: { phone, employeeId: empIdStr, department, designation }
+          },
+          moduleAccess: adminModuleAccess ? {
+            create: adminModuleAccess.map((code: string) => ({ moduleCode: code }))
+          } : undefined,
+          examScopes: validExamScopes.length > 0 ? {
+            create: validExamScopes.map((id: string) => ({ examProgrammeId: id }))
+          } : undefined,
+          mentorProfile: (roleRecord.name === 'Mentor' && mentorSettings) ? {
+            create: {
+              mentorshipMode: mentorSettings.mentorshipMode || 'BOTH',
+              maxCapacity: mentorSettings.maxCapacity ? parseInt(mentorSettings.maxCapacity) : null,
+              activeStudentCount: 0
+            }
+          } : undefined
+        }
+      });
+
+      const rawToken = crypto.randomBytes(32).toString('hex');
+      const tokenHash = hashToken(rawToken);
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
+      const invitation = await tx.adminInvitation.create({
+        data: {
+          adminUserId: user.id,
+          tokenHash,
+          expiresAt,
+          createdByAdminId: finalInviterId,
+          status: 'PENDING'
+        }
+      });
+
+      const emailResult = await sendInvitationEmail(user.email, rawToken, user.fullName);
+      
+      if (emailResult.success) {
+        await tx.adminInvitation.update({
+          where: { id: invitation.id },
+          data: { status: 'SENT', sentAt: new Date() }
+        });
+      } else {
+        await tx.adminInvitation.update({
+          where: { id: invitation.id },
+          data: { status: 'DELIVERY_FAILED' }
+        });
+        throw new Error(`Failed to send invitation email: ${emailResult.error}`);
+      }
+
+      await tx.adminAuditLog.create({
         data: {
           adminUserId: finalInviterId,
           action: 'INVITE_MEMBER',
           module: 'TEAM',
           recordType: 'AdminUser',
-          recordId: adminUser.id,
-          newValue: JSON.stringify({ email, role })
+          recordId: user.id,
+          newValue: JSON.stringify({ email, role: roleRecord.name, status: emailResult.success ? 'SENT' : 'DELIVERY_FAILED' })
         }
       });
-    }
+
+      return user;
+    });
 
     return adminUser;
   }
@@ -240,7 +252,7 @@ export class TeamService {
 
     const primaryRole = m.adminRoles[0]?.role;
     let mappedStatus = m.accountStatus as string;
-    if (m.accountStatus === 'INACTIVE' && !m.lastLoginAt) {
+    if (mappedStatus === 'PENDING_INVITE') {
       mappedStatus = 'Pending Invite';
     }
 
@@ -268,64 +280,283 @@ export class TeamService {
     };
   }
 
+  async getMemberActivity(id: string, page = 1, limit = 10) {
+    const skip = (page - 1) * limit;
+    
+    const [total, activities] = await Promise.all([
+      prisma.adminAuditLog.count({
+        where: { recordId: id, recordType: 'AdminUser' }
+      }),
+      prisma.adminAuditLog.findMany({
+        where: { recordId: id, recordType: 'AdminUser' },
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          adminUser: { select: { fullName: true, email: true } }
+        }
+      })
+    ]);
+
+    return {
+      activities,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit)
+    };
+  }
+
   async resendInvite(id: string, adminId: string) {
-    // Generate new token and send email
-    await prisma.adminAuditLog.create({
-      data: {
-        adminUserId: adminId,
-        action: 'RESEND_INVITE',
-        module: 'TEAM',
-        recordType: 'AdminUser',
-        recordId: id
+    const user = await prisma.adminUser.findUnique({ where: { id } });
+    if (!user || user.accountStatus !== 'PENDING_INVITE') {
+      throw new Error('User is not pending invitation.');
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.adminInvitation.updateMany({
+        where: { adminUserId: id, status: { in: ['PENDING', 'SENT', 'DELIVERY_FAILED'] } },
+        data: { status: 'CANCELLED', cancelledAt: new Date() }
+      });
+
+      const rawToken = crypto.randomBytes(32).toString('hex');
+      const tokenHash = hashToken(rawToken);
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+      const newInv = await tx.adminInvitation.create({
+        data: {
+          adminUserId: id,
+          tokenHash,
+          expiresAt,
+          createdByAdminId: adminId,
+          status: 'PENDING'
+        }
+      });
+
+      const emailResult = await sendInvitationEmail(user.email, rawToken, user.fullName);
+      
+      if (emailResult.success) {
+        await tx.adminInvitation.update({
+          where: { id: newInv.id },
+          data: { status: 'SENT', sentAt: new Date() }
+        });
+      } else {
+        await tx.adminInvitation.update({
+          where: { id: newInv.id },
+          data: { status: 'DELIVERY_FAILED' }
+        });
+        throw new Error('Failed to send email.');
       }
+
+      await tx.adminAuditLog.create({
+        data: {
+          adminUserId: adminId,
+          action: 'INVITATION_RESENT',
+          module: 'TEAM',
+          recordType: 'AdminUser',
+          recordId: id
+        }
+      });
     });
+
     return { success: true };
   }
 
   async cancelInvite(id: string, adminId: string) {
-    // Invalidate token
-    await prisma.adminAuditLog.create({
-      data: {
-        adminUserId: adminId,
-        action: 'CANCEL_INVITE',
-        module: 'TEAM',
-        recordType: 'AdminUser',
-        recordId: id
+    await prisma.$transaction(async (tx) => {
+      const user = await tx.adminUser.findUnique({ where: { id } });
+      if (!user || user.accountStatus !== 'PENDING_INVITE') {
+        throw new Error('User is not pending invitation.');
       }
+
+      await tx.adminInvitation.updateMany({
+        where: { adminUserId: id, status: { in: ['PENDING', 'SENT', 'DELIVERY_FAILED'] } },
+        data: { status: 'CANCELLED', cancelledAt: new Date() }
+      });
+
+      await tx.adminUser.update({
+        where: { id },
+        data: { accountStatus: 'INACTIVE', isActive: false }
+      });
+
+      await tx.adminAuditLog.create({
+        data: {
+          adminUserId: adminId,
+          action: 'CANCEL_INVITE',
+          module: 'TEAM',
+          recordType: 'AdminUser',
+          recordId: id,
+          previousValue: JSON.stringify({ status: 'PENDING_INVITE' }),
+          newValue: JSON.stringify({ status: 'INACTIVE' })
+        }
+      });
     });
     return { success: true };
   }
 
   async editMember(id: string, data: any, adminId: string) {
-    // Basic info update logic
-    return { success: true };
+    const user = await prisma.adminUser.findUnique({ where: { id } });
+    if (!user) throw new Error('User not found');
+
+    // Protect Super Admin
+    if (data.roleId) {
+      const isSuperAdmin = await prisma.adminRole.findFirst({
+        where: { adminUserId: id, role: { OR: [{ name: 'Super Admin' }, { code: 'SUPER_ADMIN' }] } }
+      });
+      if (isSuperAdmin) {
+        const newRole = await prisma.role.findUnique({ where: { id: data.roleId } });
+        if (newRole && newRole.name !== 'Super Admin' && newRole.code !== 'SUPER_ADMIN') {
+          await this.checkSuperAdminProtection(id);
+        }
+      }
+    }
+
+    const updatedUser = await prisma.adminUser.update({
+      where: { id },
+      data: {
+        fullName: data.fullName,
+      }
+    });
+
+    await prisma.adminProfile.upsert({
+      where: { adminUserId: id },
+      update: {
+        phone: data.phone,
+        employeeId: data.employeeId,
+        department: data.department,
+        designation: data.designation,
+        reportingManagerId: data.reportingManagerId,
+      },
+      create: {
+        adminUserId: id,
+        phone: data.phone,
+        employeeId: data.employeeId,
+        department: data.department,
+        designation: data.designation,
+        reportingManagerId: data.reportingManagerId,
+      }
+    });
+
+    if (data.roleId) {
+      await prisma.adminRole.deleteMany({ where: { adminUserId: id } });
+      await prisma.adminRole.create({
+        data: { adminUserId: id, roleId: data.roleId }
+      });
+    }
+
+    await prisma.adminAuditLog.create({
+      data: {
+        adminUserId: adminId,
+        action: 'EDIT_MEMBER',
+        module: 'TEAM',
+        recordType: 'AdminUser',
+        recordId: id,
+        newValue: { updates: data }
+      }
+    });
+    return updatedUser;
   }
 
   async editAccess(id: string, data: any, adminId: string) {
-    // Access update logic
+    const user = await prisma.adminUser.findUnique({ where: { id } });
+    if (!user) throw new Error('User not found');
+
+    if (data.memberModuleScope) {
+      await prisma.adminModuleAccess.deleteMany({ where: { adminUserId: id } });
+      if (data.memberModuleScope.length > 0) {
+        await prisma.adminModuleAccess.createMany({
+          data: data.memberModuleScope.map((mod: string) => ({ adminUserId: id, moduleCode: mod }))
+        });
+      }
+    }
+
+    if (data.examScope) {
+      await prisma.adminExamScope.deleteMany({ where: { adminUserId: id } });
+      if (data.examScope.length > 0) {
+        await prisma.adminExamScope.createMany({
+          data: data.examScope.map((exam: string) => ({ adminUserId: id, examProgrammeId: exam }))
+        });
+      }
+    }
+
+    await prisma.adminAuditLog.create({
+      data: {
+        adminUserId: adminId,
+        action: 'EDIT_MEMBER_SCOPE',
+        module: 'TEAM',
+        recordType: 'AdminUser',
+        recordId: id,
+        newValue: { memberModuleScope: data.memberModuleScope, examScope: data.examScope }
+      }
+    });
     return { success: true };
   }
 
+  async checkSuperAdminProtection(id: string) {
+    const user = await prisma.adminUser.findUnique({
+      where: { id },
+      include: { adminRoles: { include: { role: true } } }
+    });
+    
+    if (!user) throw new Error('User not found');
+    const isSuperAdmin = user.adminRoles.some(ar => ar.role.name === 'Super Admin' || ar.role.code === 'SUPER_ADMIN');
+    
+    if (isSuperAdmin) {
+      const activeSuperAdminsCount = await prisma.adminUser.count({
+        where: {
+          accountStatus: 'ACTIVE',
+          adminRoles: {
+            some: { role: { OR: [{ name: 'Super Admin' }, { code: 'SUPER_ADMIN' }] } }
+          }
+        }
+      });
+
+      if (activeSuperAdminsCount <= 1 && user.accountStatus === 'ACTIVE') {
+        throw new Error('This action cannot be completed because the platform must retain at least one active Super Admin.');
+      }
+    }
+  }
+
   async suspendMember(id: string, adminId: string) {
-    await prisma.adminUser.update({ where: { id }, data: { accountStatus: 'SUSPENDED', isActive: false } });
-    await prisma.adminAuditLog.create({
-      data: { adminUserId: adminId, action: 'SUSPEND_MEMBER', module: 'TEAM', recordType: 'AdminUser', recordId: id }
+    if (id === adminId) {
+      throw new Error('You cannot suspend yourself.');
+    }
+    await this.checkSuperAdminProtection(id);
+
+    await prisma.$transaction(async (tx) => {
+      await tx.adminUser.update({ where: { id }, data: { accountStatus: 'SUSPENDED', isActive: false } });
+      await tx.userSession.deleteMany({ where: { adminUserId: id } });
+      
+      await tx.adminAuditLog.create({
+        data: { adminUserId: adminId, action: 'SUSPEND_MEMBER', module: 'TEAM', recordType: 'AdminUser', recordId: id }
+      });
     });
     return { success: true };
   }
 
   async reactivateMember(id: string, adminId: string) {
-    await prisma.adminUser.update({ where: { id }, data: { accountStatus: 'ACTIVE', isActive: true } });
-    await prisma.adminAuditLog.create({
-      data: { adminUserId: adminId, action: 'REACTIVATE_MEMBER', module: 'TEAM', recordType: 'AdminUser', recordId: id }
+    await prisma.$transaction(async (tx) => {
+      await tx.adminUser.update({ where: { id }, data: { accountStatus: 'ACTIVE', isActive: true } });
+      await tx.adminAuditLog.create({
+        data: { adminUserId: adminId, action: 'REACTIVATE_MEMBER', module: 'TEAM', recordType: 'AdminUser', recordId: id }
+      });
     });
     return { success: true };
   }
 
   async deactivateMember(id: string, adminId: string) {
-    await prisma.adminUser.update({ where: { id }, data: { accountStatus: 'INACTIVE', isActive: false } });
-    await prisma.adminAuditLog.create({
-      data: { adminUserId: adminId, action: 'DEACTIVATE_MEMBER', module: 'TEAM', recordType: 'AdminUser', recordId: id }
+    if (id === adminId) {
+      throw new Error('You cannot deactivate yourself.');
+    }
+    await this.checkSuperAdminProtection(id);
+
+    await prisma.$transaction(async (tx) => {
+      await tx.adminUser.update({ where: { id }, data: { accountStatus: 'INACTIVE', isActive: false } });
+      await tx.userSession.deleteMany({ where: { adminUserId: id } });
+
+      await tx.adminAuditLog.create({
+        data: { adminUserId: adminId, action: 'DEACTIVATE_MEMBER', module: 'TEAM', recordType: 'AdminUser', recordId: id }
+      });
     });
     return { success: true };
   }

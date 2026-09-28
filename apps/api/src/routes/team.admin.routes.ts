@@ -4,7 +4,7 @@ import { authenticateToken, requireRole } from '../middleware/auth';
 
 import { TeamRoleController } from '../controllers/admin/team-role.controller';
 
-const router = Router();
+const router: import('express').Router = Router();
 const teamController = new TeamController();
 const teamRoleController = new TeamRoleController();
 
@@ -26,6 +26,7 @@ router.get('/members', teamController.listMembers);
 router.get('/kpi', teamController.getKPIs);
 router.post('/invite', teamController.inviteMember);
 router.get('/members/:id', teamController.getMemberDetails);
+router.get('/members/:id/activity', teamController.getMemberActivity);
 router.post('/members/:id/resend-invite', teamController.resendInvite);
 router.post('/members/:id/cancel-invite', teamController.cancelInvite);
 router.put('/members/:id', teamController.editMember);

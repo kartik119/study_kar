@@ -2,7 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { authenticateToken, AuthenticatedRequest } from '../middleware/auth';
 import { PaymentReportService } from '../services/payment-report.service';
 
-export const paymentReportAdminRouter = Router();
+export const paymentReportAdminRouter: import('express').Router = Router();
 
 // Protect all report endpoints
 paymentReportAdminRouter.use(authenticateToken);

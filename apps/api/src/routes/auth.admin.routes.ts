@@ -5,12 +5,20 @@ import { AdminLoginSchema } from '@study-karnataka/validation';
 import { comparePassword, hashToken } from '../utils/crypto';
 import { signAccessToken, signRefreshToken } from '../utils/jwt';
 import { sendSuccess, sendError } from '../utils/response';
+import { TeamAuthController } from '../controllers/admin/team.auth.controller';
+import { sendSuccess, sendError } from '../utils/response';
 import { PermissionKey } from '@study-karnataka/shared-types';
 
 const router: Router = Router();
 
 const MAX_FAILED_ATTEMPTS = 5;
 const LOCKOUT_MINUTES = 15;
+
+const teamAuthController = new TeamAuthController();
+
+// POST /api/v1/auth/admin/activate
+router.post('/auth/admin/activate', teamAuthController.activateAccount.bind(teamAuthController));
+router.get('/auth/admin/validate-token', teamAuthController.validateToken.bind(teamAuthController));
 
 // POST /api/v1/auth/admin/login
 router.post('/auth/admin/login', async (req: Request, res: Response): Promise<void> => {

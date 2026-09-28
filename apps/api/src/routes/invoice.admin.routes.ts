@@ -78,9 +78,9 @@ router.post('/generate-from-transaction', async (req: AuthenticatedRequest, res:
 // GET /api/v1/admin/subscriptions/invoices/:id/pdf
 router.get('/:id/pdf', async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const pdfBuffer = await InvoiceAdminService.generateInvoicePdfBuffer(req.params.id);
+    const pdfBuffer = await InvoiceAdminService.generateInvoicePdfBuffer((req.params.id as string));
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `inline; filename="invoice-${req.params.id}.pdf"`);
+    res.setHeader('Content-Disposition', `inline; filename="invoice-${(req.params.id as string)}.pdf"`);
     res.send(pdfBuffer);
   } catch (err: any) {
     handleRouteError(res, err);
@@ -90,7 +90,7 @@ router.get('/:id/pdf', async (req: AuthenticatedRequest, res: Response) => {
 // POST /api/v1/admin/subscriptions/invoices/:id/regenerate-pdf
 router.post('/:id/regenerate-pdf', async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const pdfBuffer = await InvoiceAdminService.generateInvoicePdfBuffer(req.params.id);
+    const pdfBuffer = await InvoiceAdminService.generateInvoicePdfBuffer((req.params.id as string));
     res.json({
       success: true,
       message: 'PDF regenerated successfully',
@@ -107,7 +107,7 @@ router.post('/:id/regenerate-pdf', async (req: AuthenticatedRequest, res: Respon
 // GET /api/v1/admin/subscriptions/invoices/:id
 router.get('/:id', async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const invoice = await InvoiceAdminService.getInvoiceById(req.params.id);
+    const invoice = await InvoiceAdminService.getInvoiceById((req.params.id as string));
     if (!invoice) {
       return res.status(404).json({
         success: false,
@@ -137,3 +137,4 @@ router.get('/', async (req: AuthenticatedRequest, res: Response) => {
 });
 
 export default router;
+

@@ -49,7 +49,7 @@ export class TeamController {
 
   getMemberDetails = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { id } = req.params;
+      const id = (req.params.id as string);
       const result = await this.teamService.getMemberDetails(id);
       if (!result) {
         return res.status(404).json(sendError('NOT_FOUND', 'Team member not found'));
@@ -60,9 +60,20 @@ export class TeamController {
     }
   };
 
+  getMemberActivity = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const id = (req.params.id as string);
+      const { page = '1', limit = '10' } = req.query;
+      const result = await this.teamService.getMemberActivity(id, parseInt(page as string), parseInt(limit as string));
+      res.status(200).json(sendSuccess(result, 'Member activity fetched successfully'));
+    } catch (error) {
+      next(error);
+    }
+  };
+
   resendInvite = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { id } = req.params;
+      const id = (req.params.id as string);
       const adminId = (req as any).user?.id;
       const result = await this.teamService.resendInvite(id, adminId);
       res.status(200).json(sendSuccess(result, 'Invitation resent successfully'));
@@ -73,7 +84,7 @@ export class TeamController {
 
   cancelInvite = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { id } = req.params;
+      const id = (req.params.id as string);
       const adminId = (req as any).user?.id;
       const result = await this.teamService.cancelInvite(id, adminId);
       res.status(200).json(sendSuccess(result, 'Invitation cancelled successfully'));
@@ -84,7 +95,7 @@ export class TeamController {
 
   editMember = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { id } = req.params;
+      const id = (req.params.id as string);
       const adminId = (req as any).user?.id;
       const data = req.body;
       const result = await this.teamService.editMember(id, data, adminId);
@@ -96,7 +107,7 @@ export class TeamController {
 
   editAccess = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { id } = req.params;
+      const id = (req.params.id as string);
       const adminId = (req as any).user?.id;
       const data = req.body;
       const result = await this.teamService.editAccess(id, data, adminId);
@@ -108,7 +119,7 @@ export class TeamController {
 
   suspendMember = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { id } = req.params;
+      const id = (req.params.id as string);
       const adminId = (req as any).user?.id;
       const result = await this.teamService.suspendMember(id, adminId);
       res.status(200).json(sendSuccess(result, 'Member suspended successfully'));
@@ -119,7 +130,7 @@ export class TeamController {
 
   reactivateMember = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { id } = req.params;
+      const id = (req.params.id as string);
       const adminId = (req as any).user?.id;
       const result = await this.teamService.reactivateMember(id, adminId);
       res.status(200).json(sendSuccess(result, 'Member reactivated successfully'));
@@ -130,7 +141,7 @@ export class TeamController {
 
   deactivateMember = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { id } = req.params;
+      const id = (req.params.id as string);
       const adminId = (req as any).user?.id;
       const result = await this.teamService.deactivateMember(id, adminId);
       res.status(200).json(sendSuccess(result, 'Member deactivated successfully'));
@@ -139,3 +150,4 @@ export class TeamController {
     }
   };
 }
+

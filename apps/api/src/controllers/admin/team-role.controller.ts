@@ -26,7 +26,7 @@ export class TeamRoleController {
 
   getRoleDetails = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { id } = req.params;
+      const id = (req.params.id as string) as string;
       const result = await this.roleService.getRoleDetails(id);
       res.status(200).json(sendSuccess(result, 'Role details fetched successfully'));
     } catch (error) {
@@ -46,7 +46,7 @@ export class TeamRoleController {
 
   updateRole = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { id } = req.params;
+      const id = (req.params.id as string) as string;
       const adminId = (req as any).user?.id;
       const result = await this.roleService.updateRole(id, req.body, adminId);
       res.status(200).json(sendSuccess(result, 'Role updated successfully'));
@@ -64,3 +64,4 @@ export class TeamRoleController {
     }
   };
 }
+

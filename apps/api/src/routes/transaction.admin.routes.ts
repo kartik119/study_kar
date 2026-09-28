@@ -70,7 +70,7 @@ router.get('/', async (req: AuthenticatedRequest, res: Response) => {
 // GET /api/v1/admin/transactions/:id
 router.get('/:id', async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const transaction = await TransactionAdminService.getTransactionById(req.params.id);
+    const transaction = await TransactionAdminService.getTransactionById((req.params.id as string));
     res.json({
       success: true,
       data: transaction,
@@ -81,3 +81,4 @@ router.get('/:id', async (req: AuthenticatedRequest, res: Response) => {
 });
 
 export default router;
+

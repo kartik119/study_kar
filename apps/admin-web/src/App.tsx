@@ -28,6 +28,7 @@ class ErrorBoundary extends Component<{ children: React.ReactNode }, { hasError:
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AdminLayout } from './components/AdminLayout';
 import { AdminLogin } from './pages/AdminLogin';
+import { AdminActivatePage } from './pages/auth/AdminActivatePage';
 import { ExamsList } from './pages/exams/ExamsList';
 import { ExamForm } from './pages/exams/ExamForm';
 import { ExamDetail } from './pages/exams/ExamDetail';
@@ -138,6 +139,8 @@ export const App: React.FC = () => (
   <ErrorBoundary><BrowserRouter>
     <Routes>
       <Route path="/login" element={<AdminLogin />} />
+      <Route path="/admin/login" element={<Navigate to="/login" replace />} />
+      <Route path="/admin/activate" element={<AdminActivatePage />} />
       <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
       <Route

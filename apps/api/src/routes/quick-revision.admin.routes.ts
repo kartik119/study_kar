@@ -151,7 +151,7 @@ router.post('/cards', async (req: Request, res: Response) => {
  */
 router.get('/cards/:id', async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id;
     const card = await prisma.revisionCard.findUnique({
       where: { id: id as string },
       include: {
@@ -189,7 +189,7 @@ router.get('/cards/:id', async (req: Request, res: Response) => {
  */
 router.patch('/cards/:id', async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id;
     const body = req.body;
 
     const updateData: any = {};
@@ -243,7 +243,7 @@ router.patch('/cards/:id', async (req: Request, res: Response) => {
  */
 router.delete('/cards/:id', async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id;
     await prisma.revisionCard.delete({
       where: { id: id as string },
     });

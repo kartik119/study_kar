@@ -7,7 +7,7 @@ import { StudyPlannerService } from '../services/study-planner.service';
 import { StudyPlanGenerationService } from '../services/study-plan-generation.service';
 import { differenceInDays } from 'date-fns';
 
-const router = Router();
+const router: import('express').Router = Router();
 const prisma = new PrismaClient();
 
 // 0. GET /api/v1/student/study-plans/available-exams (Get exams with active templates)

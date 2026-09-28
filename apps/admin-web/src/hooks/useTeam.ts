@@ -44,6 +44,17 @@ export const useTeam = () => {
     }
   };
 
+  const getActivityLogs = async (id: string, page = 1, limit = 10) => {
+    try {
+      const res = await teamApi.getMemberActivity(id, page, limit);
+      if (res.success) return res.data;
+      return null;
+    } catch (error) {
+      console.error('Failed to load activity logs');
+      return null;
+    }
+  };
+
   const inviteMember = async (data: InviteMemberData) => {
     try {
       const res = await teamApi.inviteMember(data);
@@ -138,6 +149,7 @@ export const useTeam = () => {
     fetchKPIs,
     fetchMembers,
     getMemberDetails,
+    getActivityLogs,
     inviteMember,
     resendInvite,
     cancelInvite,

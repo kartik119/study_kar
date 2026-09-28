@@ -3,6 +3,7 @@ import { Request, Response, NextFunction } from 'express';
 import { verifyAccessToken } from '../utils/jwt';
 import { sendError } from '../utils/response';
 import { PermissionKey } from '@study-karnataka/shared-types';
+import { prisma } from '@study-karnataka/database';
 
 export interface AuthenticatedRequest extends Request {
   user?: {
@@ -14,7 +15,7 @@ export interface AuthenticatedRequest extends Request {
   };
 }
 
-export function authenticateToken(req: AuthenticatedRequest, res: Response, next: NextFunction): void {
+export async function authenticateToken(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
   const authHeader = req.headers['authorization'];
   let token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
 
@@ -30,6 +31,18 @@ export function authenticateToken(req: AuthenticatedRequest, res: Response, next
   try {
     const payload = verifyAccessToken(token);
     req.user = payload;
+    
+    // Check if session still exists in DB
+    const session = await prisma.userSession.findUnique({
+      where: { id: payload.sessionId },
+      include: { adminUser: true }
+    });
+
+    if (!session || !session.adminUser || session.adminUser.accountStatus !== 'ACTIVE') {
+      res.status(401).json(sendError('UNAUTHENTICATED', 'Session invalidated or account deactivated.'));
+      return;
+    }
+
     next();
   } catch (err: any) {
     if (err.name === 'TokenExpiredError') {

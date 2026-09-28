@@ -169,7 +169,7 @@ router.get('/', async (req: AuthenticatedRequest, res: Response) => {
 // GET /api/v1/admin/subscriptions/student-subscriptions/:id
 router.get('/:id', async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const subscription = await StudentSubscriptionService.getSubscriptionById(req.params.id);
+    const subscription = await StudentSubscriptionService.getSubscriptionById((req.params.id as string));
     res.json({
       success: true,
       data: subscription,
@@ -203,7 +203,7 @@ router.post('/:id/renew', async (req: AuthenticatedRequest, res: Response) => {
   try {
     const validated = renewSubscriptionSchema.parse(req.body);
     const updated = await StudentSubscriptionService.renewSubscription(
-      req.params.id,
+      (req.params.id as string),
       validated as any,
       req.user?.userId,
       'Admin'
@@ -223,7 +223,7 @@ router.post('/:id/change-plan', async (req: AuthenticatedRequest, res: Response)
   try {
     const validated = changePlanSchema.parse(req.body);
     const updated = await StudentSubscriptionService.changePlan(
-      req.params.id,
+      (req.params.id as string),
       validated as any,
       req.user?.userId,
       'Admin'
@@ -243,7 +243,7 @@ router.post('/:id/pause', async (req: AuthenticatedRequest, res: Response) => {
   try {
     const validated = pauseSubscriptionSchema.parse(req.body);
     const updated = await StudentSubscriptionService.pauseSubscription(
-      req.params.id,
+      (req.params.id as string),
       validated as any,
       req.user?.userId,
       'Admin'
@@ -262,7 +262,7 @@ router.post('/:id/pause', async (req: AuthenticatedRequest, res: Response) => {
 router.post('/:id/resume', async (req: AuthenticatedRequest, res: Response) => {
   try {
     const updated = await StudentSubscriptionService.resumeSubscription(
-      req.params.id,
+      (req.params.id as string),
       req.user?.userId,
       'Admin'
     );
@@ -281,7 +281,7 @@ router.post('/:id/cancel', async (req: AuthenticatedRequest, res: Response) => {
   try {
     const validated = cancelSubscriptionSchema.parse(req.body);
     const updated = await StudentSubscriptionService.cancelSubscription(
-      req.params.id,
+      (req.params.id as string),
       validated as any,
       req.user?.userId,
       'Admin'
@@ -299,3 +299,4 @@ router.post('/:id/cancel', async (req: AuthenticatedRequest, res: Response) => {
 });
 
 export default router;
+
