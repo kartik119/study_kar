@@ -13,7 +13,12 @@ const standardPerms = [
   { code: 'students.mentor_checkins', name: 'Manage Check-ins', description: 'Conduct student check-ins' },
   { code: 'students.reports', name: 'View Reports', description: 'View mentorship reports' },
   { code: 'study_plans.manage', name: 'Manage Plans', description: 'Create and manage study plans' },
-  { code: 'quick_revision.manage', name: 'Manage Revision', description: 'Manage quick revision content' }
+  { code: 'quick_revision.manage', name: 'Manage Revision', description: 'Manage quick revision content' },
+  { code: 'current_affairs.manage', name: 'Manage Current Affairs', description: 'Manage current affairs content' },
+  { code: 'subscriptions.manage', name: 'Manage Subscriptions', description: 'Manage subscriptions and payments' },
+  { code: 'team.manage', name: 'Manage Team', description: 'Manage team members and roles' },
+  { code: 'support.manage', name: 'Manage Support', description: 'Manage support tickets' },
+  { code: 'settings.manage', name: 'Manage Settings', description: 'Manage platform settings and configurations' }
 ];
 
 async function seed() {

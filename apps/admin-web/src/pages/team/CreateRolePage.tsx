@@ -167,7 +167,12 @@ export const CreateRolePage: React.FC = () => {
       { code: 'students.mentor_checkins', name: 'Manage Check-ins', desc: 'Conduct student check-ins' },
       { code: 'students.reports', name: 'View Reports', desc: 'View mentorship reports' },
       { code: 'study_plans.manage', name: 'Manage Plans', desc: 'Create and manage study plans' },
-      { code: 'quick_revision.manage', name: 'Manage Revision', desc: 'Manage quick revision content' }
+      { code: 'quick_revision.manage', name: 'Manage Revision', desc: 'Manage quick revision content' },
+      { code: 'current_affairs.manage', name: 'Manage Current Affairs', desc: 'Manage current affairs content' },
+      { code: 'subscriptions.manage', name: 'Manage Subscriptions', desc: 'Manage subscriptions and payments' },
+      { code: 'team.manage', name: 'Manage Team', desc: 'Manage team members and roles' },
+      { code: 'support.manage', name: 'Manage Support', desc: 'Manage support tickets' },
+      { code: 'settings.manage', name: 'Manage Settings', desc: 'Manage platform settings and configurations' }
     ];
 
     // Merge standard perms with db perms to ensure all modules have actions in UI
