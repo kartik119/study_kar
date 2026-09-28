@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { PageHeader, Card, Input, Button, Badge } from '@study-karnataka/ui';
 import { useRoles } from '../../hooks/useRoles';
-import { ChevronLeft, LayoutDashboard, FileText, BookOpen, CheckSquare, Clock, Video, FileEdit, Users, CreditCard, Shield, Settings, HelpCircle, Check, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, LayoutDashboard, FileText, BookOpen, CheckSquare, Clock, Video, FileEdit, Users, CreditCard, Shield, Settings, HelpCircle, Check, X } from 'lucide-react';
 
 const MODULES_MAP: Record<string, any> = {
   'dashboard': { name: 'Dashboard', icon: LayoutDashboard, desc: 'View dashboard and analytics' },
@@ -170,7 +170,12 @@ export const CreateRolePage: React.FC = () => {
       { code: 'quick_revision.manage', name: 'Manage Revision', desc: 'Manage quick revision content' }
     ];
 
-    const allPerms = permissions.length > 0 ? permissions : standardPerms;
+    // Merge standard perms with db perms to ensure all modules have actions in UI
+    const allPermsMap = new Map();
+    standardPerms.forEach(p => allPermsMap.set(p.code, p));
+    permissions.forEach(p => allPermsMap.set(p.code, p));
+    
+    const allPerms = Array.from(allPermsMap.values());
     
     allPerms.forEach(p => {
       const mod = p.code.split('.')[0];
