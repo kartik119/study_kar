@@ -60,7 +60,7 @@ export const useTeam = () => {
     try {
       const res = await teamApi.inviteMember(data);
       if (res.success) {
-        // alert('Member invited successfully');
+        alert('Member invited successfully');
         fetchKPIs();
         return true;
       }
@@ -72,16 +72,32 @@ export const useTeam = () => {
     }
   };
 
+  const editMember = async (id: string, data: any) => {
+    try {
+      const res = await teamApi.editMember(id, data);
+      if (res.success) {
+        fetchKPIs();
+        return true;
+      }
+      return false;
+    } catch (error: any) {
+      console.error(error.response?.data?.message || 'Failed to update member');
+      alert(error.response?.data?.message || 'Failed to update member');
+      return false;
+    }
+  };
+
   const resendInvite = async (id: string) => {
     try {
       const res = await teamApi.resendInvite(id);
       if (res.success) {
-        // alert('Invitation resent');
+        alert('Invitation resent successfully');
         return true;
       }
       return false;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to resend invitation');
+      alert(error.response?.data?.message || 'Failed to resend invitation');
       return false;
     }
   };
@@ -90,12 +106,13 @@ export const useTeam = () => {
     try {
       const res = await teamApi.cancelInvite(id);
       if (res.success) {
-        // alert('Invitation cancelled');
+        alert('Invitation cancelled');
         return true;
       }
       return false;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to cancel invitation');
+      alert(error.response?.data?.message || 'Failed to cancel invitation');
       return false;
     }
   };
@@ -152,6 +169,7 @@ export const useTeam = () => {
     getMemberDetails,
     getActivityLogs,
     inviteMember,
+    editMember,
     resendInvite,
     cancelInvite,
     suspendMember,

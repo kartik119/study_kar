@@ -10,6 +10,10 @@ export default defineConfig({
         target: 'http://localhost:6565',
         changeOrigin: true,
       },
+      '/uploads': {
+        target: 'http://localhost:6565',
+        changeOrigin: true,
+      },
     },
   },
 });

@@ -168,6 +168,7 @@ model AdminUser {
   id                String        @id @default(uuid())
   email             String        @unique
   fullName          String
+  avatarUrl         String?
   passwordHash      String
   accountStatus     AccountStatus @default(ACTIVE)
   isActive          Boolean       @default(true)

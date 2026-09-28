@@ -1,6 +1,6 @@
 // @ts-nocheck
 import React, { useEffect } from 'react';
-import { Drawer, Badge, Tabs, Table } from '@study-karnataka/ui';
+import { Modal, Badge, Tabs, Table } from '@study-karnataka/ui';
 import { useRoles } from '../../hooks/useRoles';
 
 interface RoleDetailsDrawerProps {
@@ -13,6 +13,7 @@ export const RoleDetailsDrawer: React.FC<RoleDetailsDrawerProps> = ({ roleId, is
   const { getRole, getRoleActivity, loading } = useRoles();
   const [role, setRole] = React.useState<any>(null);
   const [activities, setActivities] = React.useState<any[]>([]);
+  const [activeTab, setActiveTab] = React.useState('overview');
 
   useEffect(() => {
     if (roleId && isOpen) {
@@ -24,8 +25,8 @@ export const RoleDetailsDrawer: React.FC<RoleDetailsDrawerProps> = ({ roleId, is
   if (!role) return null;
 
   return (
-    <Drawer isOpen={isOpen} onClose={onClose} title="Role Details" size="lg">
-      <div style={{ padding: '24px' }}>
+    <Modal isOpen={isOpen} onClose={onClose} title="Role Details" maxWidth="800px">
+      <div style={{ padding: '0 24px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
           <div>
             <h2 style={{ margin: 0, fontSize: '24px', fontWeight: 600, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -38,11 +39,19 @@ export const RoleDetailsDrawer: React.FC<RoleDetailsDrawerProps> = ({ roleId, is
         </div>
 
         <Tabs
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
           tabs={[
-            {
-              label: 'Overview',
-              children: (
-                <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            { id: 'overview', label: 'Overview' },
+            { id: 'permissions', label: 'Permissions' },
+            { id: 'scope-policy', label: 'Scope Policy' },
+            { id: 'assigned-members', label: 'Assigned Members' },
+            { id: 'activity', label: 'Activity' }
+          ]}
+        />
+        
+        {activeTab === 'overview' && (
+          <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <div>
                     <label style={{ fontSize: '13px', fontWeight: 500, color: '#64748B' }}>Description</label>
                     <p style={{ margin: '4px 0 0 0', color: '#1E293B' }}>{role.description || 'No description provided.'}</p>
@@ -61,12 +70,10 @@ export const RoleDetailsDrawer: React.FC<RoleDetailsDrawerProps> = ({ roleId, is
                     </div>
                   </div>
                 </div>
-              )
-            },
-            {
-              label: 'Permissions',
-              children: (
-                <div style={{ marginTop: '24px' }}>
+        )}
+
+        {activeTab === 'permissions' && (
+          <div style={{ marginTop: '24px' }}>
                   {role.permissions && role.permissions.length > 0 ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                       {role.permissions.map((p: any) => (
@@ -80,12 +87,10 @@ export const RoleDetailsDrawer: React.FC<RoleDetailsDrawerProps> = ({ roleId, is
                     <p style={{ color: '#64748B' }}>No permissions assigned.</p>
                   )}
                 </div>
-              )
-            },
-            {
-              label: 'Scope Policy',
-              children: (
-                <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        )}
+
+        {activeTab === 'scope-policy' && (
+          <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <div style={{ backgroundColor: '#F8FAFC', padding: '16px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
                     <h5 style={{ margin: '0 0 8px 0', fontSize: '14px', fontWeight: 600, color: '#1E293B' }}>Global Scope Policy</h5>
                     <p style={{ margin: 0, color: '#475569', fontSize: '14px' }}>{role.scopePolicy || 'No policy defined'}</p>
@@ -109,12 +114,10 @@ export const RoleDetailsDrawer: React.FC<RoleDetailsDrawerProps> = ({ roleId, is
                     </div>
                   </div>
                 </div>
-              )
-            },
-            {
-              label: 'Assigned Members',
-              children: (
-                <div style={{ marginTop: '24px' }}>
+        )}
+
+        {activeTab === 'assigned-members' && (
+          <div style={{ marginTop: '24px' }}>
                   {role.assignedMembers && role.assignedMembers.length > 0 ? (
                     <Table
                       columns={[
@@ -129,12 +132,10 @@ export const RoleDetailsDrawer: React.FC<RoleDetailsDrawerProps> = ({ roleId, is
                     <p style={{ color: '#64748B' }}>No members currently assigned to this role.</p>
                   )}
                 </div>
-              )
-            },
-            {
-              label: 'Activity',
-              children: (
-                <div style={{ marginTop: '24px' }}>
+        )}
+
+        {activeTab === 'activity' && (
+          <div style={{ marginTop: '24px' }}>
                   {activities && activities.length > 0 ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                       {activities.map((act: any) => (
@@ -155,11 +156,8 @@ export const RoleDetailsDrawer: React.FC<RoleDetailsDrawerProps> = ({ roleId, is
                     <p style={{ color: '#64748B' }}>No recent activity for this role.</p>
                   )}
                 </div>
-              )
-            }
-          ]}
-        />
+        )}
       </div>
-    </Drawer>
+    </Modal>
   );
 };

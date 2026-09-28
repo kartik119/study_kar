@@ -1,6 +1,6 @@
 // @ts-nocheck
 import React, { useEffect, useState } from 'react';
-import { Drawer, Badge, Tabs, Button } from '@study-karnataka/ui';
+import { Modal, Badge, Tabs, Button } from '@study-karnataka/ui';
 import { useTeam } from '../../hooks/useTeam';
 import { useNavigate } from 'react-router-dom';
 
@@ -14,6 +14,7 @@ export const MemberDetailsDrawer: React.FC<MemberDetailsDrawerProps> = ({ member
   const { getMemberDetails } = useTeam();
   const navigate = useNavigate();
   const [member, setMember] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState('overview');
 
   useEffect(() => {
     if (memberId && isOpen) {
@@ -24,17 +25,28 @@ export const MemberDetailsDrawer: React.FC<MemberDetailsDrawerProps> = ({ member
   if (!member) return null;
 
   return (
-    <Drawer isOpen={isOpen} onClose={onClose} title="Team Member Details" size="lg">
-      <div style={{ padding: '24px' }}>
+    <Modal isOpen={isOpen} onClose={onClose} title="Team Member Details" maxWidth="800px">
+      <div style={{ padding: '0 24px' }}>
         <Tabs
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
           tabs={[
-            {
-              label: 'Overview',
-              children: (
-                <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            { id: 'overview', label: 'Overview' },
+            { id: 'role-permissions', label: 'Role & Permissions' },
+            { id: 'module-access', label: 'Module Access' },
+            { id: 'activity-logs', label: 'Activity Logs' }
+          ]}
+        />
+        
+        {activeTab === 'overview' && (
+          <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '16px', paddingBottom: '20px', borderBottom: '1px solid #E2E8F0' }}>
-                    <div style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: '#E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', fontWeight: 600, color: '#475569' }}>
-                      {member.fullName?.charAt(0) || 'U'}
+                    <div style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: '#E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', fontWeight: 600, color: '#475569', overflow: 'hidden' }}>
+                      {member.avatarUrl ? (
+                        <img src={member.avatarUrl} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        member.fullName?.charAt(0) || 'U'
+                      )}
                     </div>
                     <div>
                       <h3 style={{ margin: '0 0 4px 0', fontSize: '20px', fontWeight: 600, color: '#1E293B' }}>{member.fullName}</h3>
@@ -75,12 +87,10 @@ export const MemberDetailsDrawer: React.FC<MemberDetailsDrawerProps> = ({ member
                     </div>
                   )}
                 </div>
-              )
-            },
-            {
-              label: 'Role & Permissions',
-              children: (
-                <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        )}
+
+        {activeTab === 'role-permissions' && (
+          <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
                       <h4 style={{ margin: '0 0 4px 0', fontSize: '16px', color: '#1E293B' }}>Assigned Role: {member.role}</h4>
@@ -104,12 +114,10 @@ export const MemberDetailsDrawer: React.FC<MemberDetailsDrawerProps> = ({ member
                     </div>
                   </div>
                 </div>
-              )
-            },
-            {
-              label: 'Module Access',
-              children: (
-                <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        )}
+
+        {activeTab === 'module-access' && (
+          <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
                   <div>
                     <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', color: '#1E293B' }}>Member Module Scope</h4>
                     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -130,21 +138,16 @@ export const MemberDetailsDrawer: React.FC<MemberDetailsDrawerProps> = ({ member
                     </div>
                   </div>
                 </div>
-              )
-            },
-            {
-              label: 'Activity Logs',
-              children: (
-                <div style={{ marginTop: '24px' }}>
+        )}
+
+        {activeTab === 'activity-logs' && (
+          <div style={{ marginTop: '24px' }}>
                   <p style={{ color: '#64748B', fontSize: '14px', textAlign: 'center', padding: '32px 0' }}>
                     Activity logs will be displayed here.
                   </p>
                 </div>
-              )
-            }
-          ]}
-        />
+        )}
       </div>
-    </Drawer>
+    </Modal>
   );
 };

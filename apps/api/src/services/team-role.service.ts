@@ -12,10 +12,10 @@ export class TeamRoleService {
         { description: { contains: params.search, mode: 'insensitive' } }
       ];
     }
-    if (params.status) {
-      where.isActive = params.status === 'Active';
+    if (params.status && params.status !== 'All Statuses') {
+      where.isActive = params.status.toLowerCase() === 'active';
     }
-    if (params.type) {
+    if (params.type && params.type !== 'All Types') {
       where.isSystem = params.type === 'System Role';
     }
     

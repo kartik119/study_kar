@@ -70,6 +70,7 @@ export class TeamService {
         id: m.id,
         name: m.fullName,
         email: m.email,
+        avatarUrl: m.avatarUrl,
         phone: m.adminProfile?.phone || '-',
         employeeId: m.adminProfile?.employeeId || '-',
         role: primaryRole,
@@ -216,7 +217,7 @@ export class TeamService {
           where: { id: invitation.id },
           data: { status: 'DELIVERY_FAILED' }
         });
-        throw new Error(`Failed to send invitation email: ${emailResult.error}`);
+        console.warn(`Failed to send invitation email: ${emailResult.error}`);
       }
 
       await tx.adminAuditLog.create({
@@ -260,6 +261,7 @@ export class TeamService {
       id: m.id,
       fullName: m.fullName,
       email: m.email,
+      avatarUrl: m.avatarUrl,
       phone: m.adminProfile?.phone || '-',
       employeeId: m.adminProfile?.employeeId || '-',
       department: m.adminProfile?.department || '-',
@@ -345,7 +347,7 @@ export class TeamService {
           where: { id: newInv.id },
           data: { status: 'DELIVERY_FAILED' }
         });
-        throw new Error('Failed to send email.');
+        console.warn('Failed to send email.');
       }
 
       await tx.adminAuditLog.create({
@@ -415,25 +417,26 @@ export class TeamService {
       where: { id },
       data: {
         fullName: data.fullName,
+        avatarUrl: data.avatarUrl !== undefined ? data.avatarUrl : undefined,
       }
     });
 
     await prisma.adminProfile.upsert({
       where: { adminUserId: id },
       update: {
-        phone: data.phone,
-        employeeId: data.employeeId,
-        department: data.department,
-        designation: data.designation,
-        reportingManagerId: data.reportingManagerId,
+        phone: data.phone || null,
+        employeeId: data.employeeId?.trim() || null,
+        department: data.department?.trim() || null,
+        designation: data.designation?.trim() || null,
+        reportingManagerId: data.reportingManagerId?.trim() || null,
       },
       create: {
         adminUserId: id,
-        phone: data.phone,
-        employeeId: data.employeeId,
-        department: data.department,
-        designation: data.designation,
-        reportingManagerId: data.reportingManagerId,
+        phone: data.phone || null,
+        employeeId: data.employeeId?.trim() || null,
+        department: data.department?.trim() || null,
+        designation: data.designation?.trim() || null,
+        reportingManagerId: data.reportingManagerId?.trim() || null,
       }
     });
 

@@ -316,7 +316,7 @@ export const InviteTeamMemberPage: React.FC = () => {
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#334155', marginBottom: '4px' }}>Exam Scope <span style={{ color: '#EF4444' }}>*</span></label>
               <p style={{ fontSize: '12px', color: '#64748B', marginBottom: '12px', marginTop: 0 }}>Select the exams this member can work on.</p>
               <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                {['UPSC', 'KPSC', 'KAS', 'Others'].map(exam => {
+                {['UPSC', 'KPSC'].map(exam => {
                   const isChecked = formData.examScope.includes(exam);
                   return (
                     <label key={exam} style={{ 
@@ -604,10 +604,10 @@ Please set up your account using the secure link in this email."
             
             {selectedRole ? (
               <div style={{ marginTop: '16px' }}>
-                {selectedRole.permissions?.map((p: string, i: number) => (
+                {selectedRole.permissions?.map((p: any, i: number) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginBottom: '8px' }}>
                     <Check size={16} color="#16A34A" style={{ marginTop: '2px', flexShrink: 0 }} />
-                    <span style={{ fontSize: '13px', color: '#166534' }}>{p}</span>
+                    <span style={{ fontSize: '13px', color: '#166534' }}>{p.name || p.code || p}</span>
                   </div>
                 ))}
                 

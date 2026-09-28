@@ -71,6 +71,20 @@ export const teamApi = {
     });
   },
 
+  editMember: async (id: string, data: any) => {
+    return await fetchWithAuth(`${API_BASE}/members/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  editAccess: async (id: string, data: any) => {
+    return await fetchWithAuth(`${API_BASE}/members/${id}/access`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
   resendInvite: async (id: string) => {
     return await fetchWithAuth(`${API_BASE}/members/${id}/resend-invite`, { method: 'POST' });
   },

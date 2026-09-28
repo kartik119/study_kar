@@ -10,12 +10,13 @@ export const EditTeamMemberPage: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const [loadingMember, setLoadingMember] = useState(true);
-  const { inviteMember, members, fetchMembers } = useTeam();
+  const { editMember, getMemberDetails, members, fetchMembers } = useTeam();
   const { roles, fetchRoles } = useRoles();
 
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
+    avatarUrl: '',
     phone: '+91',
     employeeId: '',
     department: '',
@@ -39,6 +40,36 @@ export const EditTeamMemberPage: React.FC = () => {
     fetchRoles({ status: 'ACTIVE' });
     fetchMembers({ limit: 100, status: 'ACTIVE' });
   }, []);
+
+  useEffect(() => {
+    if (id) {
+      getMemberDetails(id).then(member => {
+        if (member) {
+          setFormData({
+            fullName: member.fullName || '',
+            email: member.email || '',
+            avatarUrl: member.avatarUrl || '',
+            phone: member.phone || '+91',
+            employeeId: member.employeeId || '',
+            department: member.department || '',
+            designation: member.designation || '',
+            roleId: member.roleId || member.role?.id || (roles.find(r => r.name === member.role)?.id) || '',
+            status: member.status || 'ACTIVE',
+            reportingManagerId: member.reportingManagerId || '',
+            memberModuleScope: member.memberModuleScope || [],
+            examScope: member.examScope || [],
+            mentorshipMode: member.mentorSettings?.mentorshipMode || '1-to-1 Mentorship',
+            maxCapacity: member.mentorSettings?.maxCapacity?.toString() || '50',
+            sendEmailInvite: false,
+            welcomeMessage: '',
+            joinDate: member.createdAt ? new Date(member.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+            invitationExpiry: '7 days',
+          });
+        }
+        setLoadingMember(false);
+      });
+    }
+  }, [id, roles]);
 
   useEffect(() => {
     if (formData.roleId) {
@@ -82,6 +113,40 @@ export const EditTeamMemberPage: React.FC = () => {
     }));
   };
 
+  const [uploadingImage, setUploadingImage] = useState(false);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const token = localStorage.getItem('admin_token');
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+      setUploadingImage(true);
+      const response = await fetch('/api/v1/admin/upload/image', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData,
+      });
+
+      const data = await response.json();
+      if (response.ok && data.url) {
+        setFormData(prev => ({ ...prev, avatarUrl: data.url }));
+      } else {
+        alert(data.error?.message || data.message || 'Failed to upload image');
+      }
+    } catch (error) {
+      console.error('Upload error', error);
+      alert('An error occurred while uploading the image');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!formData.fullName || !formData.email || !formData.roleId) {
       alert("Please fill out Name, Email, and Role.");
@@ -99,7 +164,7 @@ export const EditTeamMemberPage: React.FC = () => {
 
     const payload = {
       fullName: formData.fullName,
-      email: formData.email,
+      avatarUrl: formData.avatarUrl,
       phone: formData.phone,
       employeeId: formData.employeeId,
       department: formData.department,
@@ -109,22 +174,16 @@ export const EditTeamMemberPage: React.FC = () => {
       examScope: formData.examScope,
       reportingManagerId: formData.reportingManagerId,
       status: formData.status,
-      inviteSettings: {
-        sendEmail: formData.sendEmailInvite,
-        welcomeMessage: formData.welcomeMessage,
-        joinDate: formData.joinDate,
-        expiry: formData.invitationExpiry
-      },
       mentorSettings: selectedRole?.code === 'MENTOR' ? {
         mentorshipMode: formData.mentorshipMode,
         maxCapacity: formData.maxCapacity
       } : undefined
     };
 
-    const success = await inviteMember(payload);
+    const success = await editMember(id as string, payload);
     if (success) {
       // In a real app we would use a toast here
-      alert("Invitation sent successfully.");
+      alert("Member details updated successfully.");
       navigate('/team/members');
     }
   };
@@ -181,7 +240,7 @@ export const EditTeamMemberPage: React.FC = () => {
           </Button>
           <div>
             <h1 style={{ fontSize: '24px', fontWeight: 700, color: '#0F172A', margin: '0 0 4px 0' }}>Edit Team Member</h1>
-            <p style={{ color: '#64748B', margin: 0, fontSize: '14px' }}>Add a new team member and assign role, scope and additional settings.</p>
+            <p style={{ color: '#64748B', margin: 0, fontSize: '14px' }}>Modify member role, scope, and basic details.</p>
           </div>
         </div>
       </div>
@@ -197,6 +256,23 @@ export const EditTeamMemberPage: React.FC = () => {
               <div>
                 <h3 style={{ fontSize: '16px', fontWeight: 600, color: '#0F172A', margin: '0 0 4px 0' }}>Basic Information</h3>
                 <p style={{ fontSize: '13px', color: '#64748B', margin: 0 }}>Enter the team member's basic details.</p>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '20px', marginBottom: '24px' }}>
+              <div style={{ width: '80px', height: '80px', borderRadius: '50%', backgroundColor: '#F1F5F9', color: '#64748B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', fontWeight: 600, overflow: 'hidden' }}>
+                {formData.avatarUrl ? (
+                  <img src={formData.avatarUrl} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  initials
+                )}
+              </div>
+              <div>
+                <label htmlFor="avatar-upload" style={{ display: 'inline-block', padding: '8px 16px', backgroundColor: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE', borderRadius: '6px', fontSize: '13px', fontWeight: 500, cursor: 'pointer' }}>
+                  {uploadingImage ? 'Uploading...' : 'Upload Image'}
+                </label>
+                <input id="avatar-upload" type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImageUpload} disabled={uploadingImage} />
+                <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#64748B' }}>JPG, PNG or GIF. Max size of 5MB.</p>
               </div>
             </div>
             
@@ -318,7 +394,7 @@ export const EditTeamMemberPage: React.FC = () => {
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#334155', marginBottom: '4px' }}>Exam Scope <span style={{ color: '#EF4444' }}>*</span></label>
               <p style={{ fontSize: '12px', color: '#64748B', marginBottom: '12px', marginTop: 0 }}>Select the exams this member can work on.</p>
               <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                {['UPSC', 'KPSC', 'KAS', 'Others'].map(exam => {
+                {['UPSC', 'KPSC'].map(exam => {
                   const isChecked = formData.examScope.includes(exam);
                   return (
                     <label key={exam} style={{ 
@@ -503,8 +579,12 @@ Please set up your account using the secure link in this email."
             <p style={{ fontSize: '13px', color: '#64748B', margin: '0 0 24px 0' }}>Review the team member details and settings.</p>
             
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', paddingBottom: '20px', borderBottom: '1px solid #E2E8F0', marginBottom: '20px' }}>
-              <div style={{ width: '60px', height: '60px', borderRadius: '50%', backgroundColor: '#FCE7F3', color: '#DB2777', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', fontWeight: 600, flexShrink: 0 }}>
-                {initials}
+              <div style={{ width: '60px', height: '60px', borderRadius: '50%', backgroundColor: '#FCE7F3', color: '#DB2777', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', fontWeight: 600, flexShrink: 0, overflow: 'hidden' }}>
+                {formData.avatarUrl ? (
+                  <img src={formData.avatarUrl} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  initials
+                )}
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
@@ -606,10 +686,10 @@ Please set up your account using the secure link in this email."
             
             {selectedRole ? (
               <div style={{ marginTop: '16px' }}>
-                {selectedRole.permissions?.map((p: string, i: number) => (
+                {selectedRole.permissions?.map((p: any, i: number) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginBottom: '8px' }}>
                     <Check size={16} color="#16A34A" style={{ marginTop: '2px', flexShrink: 0 }} />
-                    <span style={{ fontSize: '13px', color: '#166534' }}>{p}</span>
+                    <span style={{ fontSize: '13px', color: '#166534' }}>{p.name || p.code || p}</span>
                   </div>
                 ))}
                 
@@ -632,7 +712,7 @@ Please set up your account using the secure link in this email."
           <div style={{ display: 'flex', gap: '16px', justifyContent: 'flex-end' }}>
             <Button variant="outline" onClick={() => navigate('/team/members')} style={{ flex: 1 }}>Cancel</Button>
             <Button variant="primary" onClick={handleSubmit} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-              <Send size={16} /> Send Invitation
+              <Save size={16} /> Save Changes
             </Button>
           </div>
           

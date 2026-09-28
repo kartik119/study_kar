@@ -1,8 +1,7 @@
 // @ts-nocheck
 import React, { useState, useEffect } from 'react';
-import { Drawer, Button, Badge } from '@study-karnataka/ui';
-import { teamService } from '../../services/team.service';
-import toast from 'react-hot-toast';
+import { Modal, Button, Badge } from '@study-karnataka/ui';
+import { teamApi } from '../../api/team.api';
 
 export const EditScopeDrawer: React.FC<{ isOpen: boolean; onClose: () => void; member: any; onSave: () => void }> = ({ isOpen, onClose, member, onSave }) => {
   const [loading, setLoading] = useState(false);
@@ -17,13 +16,13 @@ export const EditScopeDrawer: React.FC<{ isOpen: boolean; onClose: () => void; m
   }, [member]);
 
   const allModules = ['Students', 'Study Plans', 'Mock Tests', 'Study Materials', 'Live Classes', 'Mentorship', 'Analytics'];
-  const allExams = ['UPSC', 'KPSC', 'KAS', 'Banking'];
+  const allExams = ['UPSC', 'KPSC'];
   
   const roleModules = member?.role?.permissions?.map((p: any) => p.module) || [];
 
   const handleModuleToggle = (m: string) => {
     if (!roleModules.includes(m) && member?.role?.name !== 'Super Admin') {
-      toast.error(`Role ${member?.role?.name} does not have access to ${m}`);
+      alert(`Role ${member?.role?.name} does not have access to ${m}`);
       return;
     }
     setModuleScope(prev => prev.includes(m) ? prev.filter(x => x !== m) : [...prev, m]);
@@ -36,23 +35,23 @@ export const EditScopeDrawer: React.FC<{ isOpen: boolean; onClose: () => void; m
   const handleSave = async () => {
     setLoading(true);
     try {
-      await teamService.editAccess(member.id, {
+      await teamApi.editAccess(member.id, {
         memberModuleScope: moduleScope,
         examScope: examScope
       });
-      toast.success('Scope updated successfully');
+      alert('Scope updated successfully');
       onSave();
     } catch (err: any) {
-      toast.error(err.message || 'Failed to update scope');
+      alert(err.message || 'Failed to update scope');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Drawer isOpen={isOpen} onClose={onClose} title={`Edit Scope - ${member?.fullName}`} size="md">
-      <div style={{ paddingBottom: '80px' }}>
-        <h4 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '12px' }}>Module Scope</h4>
+    <Modal isOpen={isOpen} onClose={onClose} title={`Edit Scope - ${member?.fullName || member?.email || 'Member'}`} maxWidth="500px">
+      <div style={{ padding: '0 24px 24px 24px' }}>
+        <h4 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '12px', marginTop: '16px' }}>Module Scope</h4>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '24px' }}>
           {allModules.map(m => {
             const hasRoleAccess = roleModules.includes(m) || member?.role?.name === 'Super Admin';
@@ -79,7 +78,7 @@ export const EditScopeDrawer: React.FC<{ isOpen: boolean; onClose: () => void; m
         </div>
 
         <h4 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '12px' }}>Exam Scope</h4>
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '32px' }}>
           {allExams.map(e => (
             <div
               key={e}
@@ -100,12 +99,12 @@ export const EditScopeDrawer: React.FC<{ isOpen: boolean; onClose: () => void; m
             </div>
           ))}
         </div>
-      </div>
       
-      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '16px 20px', backgroundColor: '#F8FAFC', borderTop: '1px solid #E2E8F0', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-        <Button variant="outline" onClick={onClose} disabled={loading}>Cancel</Button>
-        <Button onClick={handleSave} isLoading={loading}>Save Scope</Button>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', borderTop: '1px solid #E2E8F0', paddingTop: '16px', marginTop: '16px' }}>
+          <Button variant="outline" onClick={onClose} disabled={loading}>Cancel</Button>
+          <Button onClick={handleSave} isLoading={loading}>Save Scope</Button>
+        </div>
       </div>
-    </Drawer>
+    </Modal>
   );
 };
