@@ -25,7 +25,6 @@ import {
   FolderTree,
   UploadCloud,
   Layers,
-  Award,
   FileText,
   Package,
   ArrowLeftRight,
@@ -33,7 +32,7 @@ import {
   RotateCcw,
   BarChart3,
 } from 'lucide-react';
-import { SearchInput, DropdownMenu } from '@study-karnataka/ui';
+import { DropdownMenu } from '@study-karnataka/ui';
 import { PermissionKey } from '@study-karnataka/shared-types';
 import './AdminLayout.css';
 

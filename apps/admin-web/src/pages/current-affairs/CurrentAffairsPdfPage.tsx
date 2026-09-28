@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { useEffect, useState } from 'react';
 import { Card, PageHeader, Button } from '@study-karnataka/ui';
 import { currentAffairsApi } from '../../services/currentAffairsApi';

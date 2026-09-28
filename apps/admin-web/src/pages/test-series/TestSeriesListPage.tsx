@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { TestSeriesResponse, TestSeriesWorkflowStatus, TestSeriesReleaseMode, SeriesQuestionReusePolicy, TestAccessClassification } from '@study-karnataka/shared-types';
 import { TestSeriesApi } from '../../api/test-series.api';
-import { MoreVertical, Edit2, Send, Globe, CheckCircle, Edit3, RotateCw, Archive, Trash2 } from 'lucide-react';
+import { MoreVertical, Edit2, Globe, RotateCw, Archive, Trash2 } from 'lucide-react';
 
 export const TestSeriesListPage: React.FC = () => {
   const navigate = useNavigate();

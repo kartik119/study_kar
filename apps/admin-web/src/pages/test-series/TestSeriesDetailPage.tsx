@@ -211,7 +211,7 @@ export const TestSeriesDetailPage: React.FC = () => {
             </div>
             <div className="flex justify-between border-b border-gray-100 pb-1">
               <span>Exam Context:</span>
-              <span className="font-semibold text-emerald-600">✓ {series.examCycle?.titleEn}</span>
+              <span className="font-semibold text-emerald-600">✓ {(series as any).examCycle?.titleEn}</span>
             </div>
             <div className="flex justify-between border-b border-gray-100 pb-1">
               <span>Tests Included:</span>

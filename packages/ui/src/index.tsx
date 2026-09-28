@@ -161,6 +161,7 @@ export const SearchInput: React.FC<InputProps> = ({ style, ...props }) => (
 
 export interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
   options: { label: string; value: string }[];
+  placeholder?: string;
 }
 
 export const Select: React.FC<SelectProps> = ({ options, style, ...props }) => (
@@ -1016,6 +1017,7 @@ Table.Cell = ({ children, className }) => (
 export interface PaginationProps {
   currentPage: number;
   totalPages: number;
+  totalItems?: number;
   onPageChange: (page: number) => void;
 }
 

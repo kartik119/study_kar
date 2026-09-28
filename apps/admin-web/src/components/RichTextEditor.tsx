@@ -11,7 +11,7 @@ interface RichTextEditorProps {
   minHeight?: string;
 }
 
-export const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeholder, minHeight = '300px' }) => {
+export const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, minHeight = '300px' }) => {
   const editor = useEditor({
     extensions: [
       StarterKit,

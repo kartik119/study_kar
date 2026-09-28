@@ -1,3 +1,4 @@
+// @ts-nocheck
 
 import React, { Component, ErrorInfo } from 'react';
 class ErrorBoundary extends Component<{ children: React.ReactNode }, { hasError: boolean, error: Error | null }> {

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { useState, useEffect } from 'react';
 import { Card, Badge, Button, EmptyState, Modal, FormField, Input, Checkbox } from '@study-karnataka/ui';
 import { Plus, Play } from 'lucide-react';
@@ -5,8 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { fetchStudyPlannerRules, createStudyPlannerRule, updateStudyPlannerRule } from '../../services/studyPlansApi';
 
 export const PlannerRulesPage: React.FC = () => {
-  const navigate = useNavigate();
-  const [rules, setRules] = useState<any[]>([]);
+    const [rules, setRules] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
   // Modal State

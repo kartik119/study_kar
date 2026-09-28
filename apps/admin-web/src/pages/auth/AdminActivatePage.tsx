@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Input, Button, Card } from '@study-karnataka/ui';
 import { Check, X, Shield, Lock, Eye, EyeOff } from 'lucide-react';
-import { adminApiClient } from '../../utils/apiClient';
 
 export const AdminActivatePage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -28,7 +27,7 @@ export const AdminActivatePage: React.FC = () => {
 
     const validateToken = async () => {
       try {
-        const response = await adminApiClient.get(`/auth/admin/validate-token?token=${token}`);
+        const response = await fetch(`/api/v1/admin/team/validate-activation?token=${token}`).then(res => { if (!res.ok) throw new Error('Invalid'); return res.json(); });
         if (response.data.success) {
           setUserData(response.data.data);
           setStatus('valid');
@@ -61,7 +60,7 @@ export const AdminActivatePage: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      const response = await adminApiClient.post('/auth/admin/activate', { token, password });
+      const response = await fetch(`/api/v1/admin/team/activate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, password }) }).then(res => { if (!res.ok) throw new Error('Invalid'); return res.json(); });
       if (response.data.success) {
         setStatus('success');
       } else {

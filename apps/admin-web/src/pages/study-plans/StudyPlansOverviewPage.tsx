@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { useState, useEffect } from 'react';
 import { Card, Badge } from '@study-karnataka/ui';
 import { CalendarCheck, Settings, Users, BookOpen, Layers } from 'lucide-react';

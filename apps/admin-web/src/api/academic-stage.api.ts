@@ -1,4 +1,4 @@
-import { ApiResponse, AcademicStage } from '@study-karnataka/shared-types';
+import { AcademicStage } from '@study-karnataka/shared-types';
 
 const API_BASE = '/api/v1/admin/academic-stages';
 

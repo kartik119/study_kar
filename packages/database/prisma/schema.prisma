@@ -16,6 +16,7 @@ enum AccountStatus {
   ACTIVE
   INACTIVE
   SUSPENDED
+  PENDING_INVITE
 }
 
 enum AccountType {
@@ -180,6 +181,7 @@ model AdminUser {
   adminRoles AdminRole[]
   auditLogs  AdminAuditLog[]
   sessions   UserSession[]
+  invitations AdminInvitation[]
 
   adminProfile  AdminProfile?
   moduleAccess  AdminModuleAccess[]
@@ -194,6 +196,35 @@ model AdminUser {
   syllabiUpdated   ExamSyllabus[] @relation("SyllabusUpdatedBy")
 
   @@map("admin_users")
+}
+
+enum AdminInvitationStatus {
+  PENDING
+  SENT
+  DELIVERY_FAILED
+  ACCEPTED
+  CANCELLED
+  EXPIRED
+}
+
+model AdminInvitation {
+  id              String                @id @default(uuid())
+  adminUserId     String
+  tokenHash       String                @unique
+  expiresAt       DateTime
+  status          AdminInvitationStatus @default(PENDING)
+  createdAt       DateTime              @default(now())
+  sentAt          DateTime?
+  acceptedAt      DateTime?
+  cancelledAt     DateTime?
+  usedAt          DateTime?
+  createdByAdminId String?
+
+  adminUser AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+
+  @@index([adminUserId])
+  @@index([tokenHash])
+  @@map("admin_invitations")
 }
 
 model Role {

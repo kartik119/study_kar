@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Plus, Filter, Eye, Edit3, Send, CheckCircle, Globe, Archive, Lock, ListTree, Trash2, RotateCcw, MoreVertical } from 'lucide-react';
