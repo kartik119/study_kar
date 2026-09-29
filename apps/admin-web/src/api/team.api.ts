@@ -139,5 +139,33 @@ export const teamApi = {
 
   getPermissions: async () => {
     return await fetchWithAuth(`${API_BASE}/permissions`);
+  },
+
+  getActivityLogs: async (query?: any) => {
+    const searchParams = new URLSearchParams();
+    if (query?.page) searchParams.append('page', query.page.toString());
+    if (query?.limit) searchParams.append('limit', query.limit.toString());
+    if (query?.search) searchParams.append('search', query.search);
+    if (query?.activityType) searchParams.append('activityType', query.activityType);
+    if (query?.actorId) searchParams.append('actorId', query.actorId);
+    if (query?.module) searchParams.append('module', query.module);
+    if (query?.dateFrom) searchParams.append('dateFrom', query.dateFrom);
+    if (query?.dateTo) searchParams.append('dateTo', query.dateTo);
+    
+    const qs = searchParams.toString();
+    return await fetchWithAuth(`${API_BASE}/activity-logs${qs ? `?${qs}` : ''}`);
+  },
+
+  getActivityLogDetails: async (id: string) => {
+    return await fetchWithAuth(`${API_BASE}/activity-logs/${id}`);
+  },
+
+  getActivityLogsKPIs: async (query?: any) => {
+    const searchParams = new URLSearchParams();
+    if (query?.dateFrom) searchParams.append('dateFrom', query.dateFrom);
+    if (query?.dateTo) searchParams.append('dateTo', query.dateTo);
+    
+    const qs = searchParams.toString();
+    return await fetchWithAuth(`${API_BASE}/activity-logs/kpi${qs ? `?${qs}` : ''}`);
   }
 };

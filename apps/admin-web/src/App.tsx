@@ -63,11 +63,14 @@ import { AdminTopicPracticeConfigPage } from './pages/mcq/AdminTopicPracticeConf
 import { AdminPerformanceAnalyticsPage } from './pages/students/AdminPerformanceAnalyticsPage';
 
 import { TeamMembersPage } from './pages/team/TeamMembersPage';
+import WorkAssignmentsPage from './pages/team/WorkAssignmentsPage';
+import CreateWorkAssignmentPage from './pages/team/CreateWorkAssignmentPage';
+import WorkAssignmentDetailsPage from './pages/team/WorkAssignmentDetailsPage';
 import { InviteTeamMemberPage } from './pages/team/InviteTeamMemberPage';
 import { EditTeamMemberPage } from './pages/team/EditTeamMemberPage';
 import { RolesPermissionsPage } from './pages/team/RolesPermissionsPage';
 import { CreateRolePage } from './pages/team/CreateRolePage';
-import { WorkAssignmentsPage, ActivityLogsPage } from './pages/team/TeamPlaceholders';
+import { ActivityLogsPage } from './pages/team/ActivityLogsPage';
 
 import {
   DashboardPage,
@@ -258,6 +261,9 @@ export const App: React.FC = () => (
         <Route path="team">
           <Route index element={<Navigate to="members" replace />} />
           <Route path="members" element={<TeamMembersPage />} />
+          <Route path="work-assignments" element={<WorkAssignmentsPage />} />
+          <Route path="work-assignments/create" element={<CreateWorkAssignmentPage />} />
+          <Route path="work-assignments/:id" element={<WorkAssignmentDetailsPage />} />
           <Route path="members/invite" element={<InviteTeamMemberPage />} />
           <Route path="members/:id/edit" element={<EditTeamMemberPage />} />
           <Route path="roles-permissions" element={<RolesPermissionsPage />} />

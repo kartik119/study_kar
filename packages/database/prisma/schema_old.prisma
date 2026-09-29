@@ -77,7 +77,6 @@ model User {
   performanceEvents     StudentPerformanceEvent[]
   taxonomyPerformances  StudentTaxonomyPerformance[]
   studyPlans            StudentStudyPlan[]
-  workAssignments       WorkAssignmentStudent[]
 
   @@map("users")
 }
@@ -180,9 +179,9 @@ model AdminUser {
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
 
-  adminRoles  AdminRole[]
-  auditLogs   AdminAuditLog[]
-  sessions    UserSession[]
+  adminRoles AdminRole[]
+  auditLogs  AdminAuditLog[]
+  sessions   UserSession[]
   invitations AdminInvitation[]
 
   adminProfile  AdminProfile?
@@ -197,9 +196,6 @@ model AdminUser {
   syllabiCreated   ExamSyllabus[] @relation("SyllabusCreatedBy")
   syllabiUpdated   ExamSyllabus[] @relation("SyllabusUpdatedBy")
 
-  assignedWork           WorkAssignment[] @relation("AssignedWork")
-  managedWorkAssignments WorkAssignment[] @relation("ReportingManagerForWork")
-
   @@map("admin_users")
 }
 
@@ -213,16 +209,16 @@ enum AdminInvitationStatus {
 }
 
 model AdminInvitation {
-  id               String                @id @default(uuid())
-  adminUserId      String
-  tokenHash        String                @unique
-  expiresAt        DateTime
-  status           AdminInvitationStatus @default(PENDING)
-  createdAt        DateTime              @default(now())
-  sentAt           DateTime?
-  acceptedAt       DateTime?
-  cancelledAt      DateTime?
-  usedAt           DateTime?
+  id              String                @id @default(uuid())
+  adminUserId     String
+  tokenHash       String                @unique
+  expiresAt       DateTime
+  status          AdminInvitationStatus @default(PENDING)
+  createdAt       DateTime              @default(now())
+  sentAt          DateTime?
+  acceptedAt      DateTime?
+  cancelledAt     DateTime?
+  usedAt          DateTime?
   createdByAdminId String?
 
   adminUser AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
@@ -246,7 +242,6 @@ model Role {
   rolePermissions RolePermission[]
   userRoles       UserRole[]
   adminRoles      AdminRole[]
-  workAssignments WorkAssignment[]
 
   @@map("roles")
 }
@@ -454,11 +449,10 @@ model ExamProgramme {
   createdAt                 DateTime @default(now())
   updatedAt                 DateTime @updatedAt
 
-  authority       ExamAuthority             @relation(fields: [authorityId], references: [id], onDelete: Cascade)
-  cycles          ExamCycle[]
-  testSeries      TestSeries[]
-  adminScopes     AdminExamScope[]
-  workAssignments WorkAssignmentExamScope[]
+  authority   ExamAuthority    @relation(fields: [authorityId], references: [id], onDelete: Cascade)
+  cycles      ExamCycle[]
+  testSeries  TestSeries[]
+  adminScopes AdminExamScope[]
 
   @@map("exam_programmes")
 }
@@ -1218,12 +1212,11 @@ model StudyMaterial {
   createdAt         DateTime                  @default(now())
   updatedAt         DateTime                  @updatedAt
 
-  locales                      StudyMaterialLocale[]
-  taxonomyMappings             StudyMaterialTaxonomyMapping[]
-  accessPolicy                 StudyMaterialAccessPolicy?
-  studyMaterialCategory        StudyMaterialCategory?         @relation(fields: [studyMaterialCategoryId], references: [id])
-  studyMaterialCategoryId      String?
-  workAssignmentStudyMaterials WorkAssignmentStudyMaterial[]
+  locales                 StudyMaterialLocale[]
+  taxonomyMappings        StudyMaterialTaxonomyMapping[]
+  accessPolicy            StudyMaterialAccessPolicy?
+  studyMaterialCategory   StudyMaterialCategory?         @relation(fields: [studyMaterialCategoryId], references: [id])
+  studyMaterialCategoryId String?
 
   @@index([code])
   @@index([contentType, recordStatus])
@@ -1513,13 +1506,12 @@ model McqQuestion {
   topic        McqTopic?         @relation(fields: [topicId], references: [id], onDelete: SetNull)
   // knowledgeArea removed temporarily
 
-  mockTestQuestions          MockTestQuestion[]
-  practiceSessionQuestions   PracticeSessionQuestion[]
-  practiceHistories          StudentMcqPracticeHistory[]
-  performanceEvents          StudentPerformanceEvent[]
-  currentAffairId            String?
-  currentAffair              CurrentAffair?              @relation(fields: [currentAffairId], references: [id], onDelete: SetNull)
-  workAssignmentMcqQuestions WorkAssignmentMcqQuestion[]
+  mockTestQuestions        MockTestQuestion[]
+  practiceSessionQuestions PracticeSessionQuestion[]
+  practiceHistories        StudentMcqPracticeHistory[]
+  performanceEvents        StudentPerformanceEvent[]
+  currentAffairId          String?
+  currentAffair            CurrentAffair?              @relation(fields: [currentAffairId], references: [id], onDelete: SetNull)
 
   @@index([code])
   @@index([examCycleId])
@@ -2413,13 +2405,12 @@ model CurrentAffair {
   category CurrentAffairCategory @relation(fields: [categoryId], references: [id])
   source   CurrentAffairSource   @relation(fields: [sourceId], references: [id])
 
-  exams                        CurrentAffairExam[]
-  stages                       CurrentAffairStage[]
-  categoriesMapped             CurrentAffairStudyMaterialCategory[]
-  topicsMapped                 CurrentAffairStudyMaterialTopic[]
-  tags                         CurrentAffairTags[]
-  mcqQuestions                 McqQuestion[]
-  workAssignmentCurrentAffairs WorkAssignmentCurrentAffair[]
+  exams            CurrentAffairExam[]
+  stages           CurrentAffairStage[]
+  categoriesMapped CurrentAffairStudyMaterialCategory[]
+  topicsMapped     CurrentAffairStudyMaterialTopic[]
+  tags             CurrentAffairTags[]
+  mcqQuestions     McqQuestion[]
 
   @@index([status])
   @@index([publishedAt])
@@ -3448,229 +3439,96 @@ enum RevisionStatus {
 }
 
 model RevisionCategory {
-  id               String                @id @default(uuid())
-  code             String                @unique
-  nameEn           String
-  nameKn           String
-  descriptionEn    String?
-  descriptionKn    String?
-  iconUrl          String?
-  displayOrder     Int                   @default(0)
-  isActive         Boolean               @default(true)
-  createdByAdminId String?
-  updatedByAdminId String?
-  createdAt        DateTime              @default(now())
-  updatedAt        DateTime              @updatedAt
-  cards            RevisionCard[]
-  subcategories    RevisionSubcategory[]
+  id                     String                   @id @default(uuid())
+  code                   String                   @unique
+  nameEn                 String
+  nameKn                 String
+  descriptionEn          String?
+  descriptionKn          String?
+  iconUrl                String?
+  displayOrder           Int                      @default(0)
+  isActive               Boolean                  @default(true)
+  createdByAdminId       String?
+  updatedByAdminId       String?
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+  cards                  RevisionCard[]
+  subcategories          RevisionSubcategory[]
 
   @@map("revision_categories")
 }
 
 model RevisionSubcategory {
-  id               String           @id @default(uuid())
-  categoryId       String
-  code             String           @unique
-  nameEn           String
-  nameKn           String
-  descriptionEn    String?
-  descriptionKn    String?
-  iconUrl          String?
-  displayOrder     Int              @default(0)
-  isActive         Boolean          @default(true)
-  createdByAdminId String?
-  updatedByAdminId String?
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
-  cards            RevisionCard[]
-  category         RevisionCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  id                  String              @id @default(uuid())
+  categoryId          String
+  code                String              @unique
+  nameEn              String
+  nameKn              String
+  descriptionEn       String?
+  descriptionKn       String?
+  iconUrl             String?
+  displayOrder        Int                 @default(0)
+  isActive            Boolean             @default(true)
+  createdByAdminId    String?
+  updatedByAdminId    String?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  cards               RevisionCard[]
+  category            RevisionCategory    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
   @@index([categoryId])
   @@map("revision_subcategories")
 }
 
 model RevisionCollection {
-  id            String         @id @default(uuid())
-  name          String
-  description   String?
-  isFreeSample  Boolean        @default(false)
-  status        RevisionStatus @default(DRAFT)
-  examCycleId   String?
-  subjectId     String?
-  categoryId    String?
-  subcategoryId String?
-  topicId       String?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  cards         RevisionCard[]
+  id             String           @id @default(uuid())
+  name           String
+  description    String?
+  isFreeSample   Boolean          @default(false)
+  status         RevisionStatus   @default(DRAFT)
+  examCycleId    String?
+  subjectId      String?
+  categoryId     String?
+  subcategoryId  String?
+  topicId        String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  cards          RevisionCard[]
 
   @@map("revision_collections")
 }
 
 model RevisionCard {
-  id                String               @id @default(uuid())
-  collectionId      String?
-  isFreeSample      Boolean              @default(false)
-  status            RevisionStatus       @default(DRAFT)
-  orderIndex        Int                  @default(0)
-  examCycleId       String?
-  subjectId         String?
-  categoryId        String?
-  subcategoryId     String?
-  topicId           String?
-  createdAt         DateTime             @default(now())
-  updatedAt         DateTime             @updatedAt
-  contentEn         Json?
-  contentKn         Json?
-  metaDescriptionEn String?
-  metaDescriptionKn String?
-  metaTitleEn       String?
-  metaTitleKn       String?
-  priority          String               @default("Medium")
-  publishDate       DateTime?
-  slug              String               @unique
-  titleEn           String
-  titleKn           String?
-  imageEn           String?
-  imageKn           String?
-  category          RevisionCategory?    @relation(fields: [categoryId], references: [id])
-  collection        RevisionCollection?  @relation(fields: [collectionId], references: [id])
-  subcategory       RevisionSubcategory? @relation(fields: [subcategoryId], references: [id])
+  id                     String                  @id @default(uuid())
+  collectionId           String?
+  isFreeSample           Boolean                 @default(false)
+  status                 RevisionStatus          @default(DRAFT)
+  orderIndex             Int                     @default(0)
+  examCycleId            String?
+  subjectId              String?
+  categoryId             String?
+  subcategoryId          String?
+  topicId                String?
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  contentEn              Json?
+  contentKn              Json?
+  metaDescriptionEn      String?
+  metaDescriptionKn      String?
+  metaTitleEn            String?
+  metaTitleKn            String?
+  priority               String                  @default("Medium")
+  publishDate            DateTime?
+  slug                   String                  @unique
+  titleEn                String
+  titleKn                String?
+  imageEn                String?
+  imageKn                String?
+  category               RevisionCategory?       @relation(fields: [categoryId], references: [id])
+  collection             RevisionCollection?     @relation(fields: [collectionId], references: [id])
+  subcategory            RevisionSubcategory?    @relation(fields: [subcategoryId], references: [id])
 
   @@index([collectionId])
   @@index([status])
   @@map("revision_cards")
-}
-
-// -----------------------------------------------------------------------------
-// WORK ASSIGNMENTS
-// -----------------------------------------------------------------------------
-
-enum WorkAssignmentStatus {
-  SCHEDULED
-  ACTIVE
-  IN_PROGRESS
-  PENDING_REVIEW
-  COMPLETED
-  CANCELLED
-}
-
-enum WorkAssignmentPriority {
-  LOW
-  MEDIUM
-  HIGH
-  URGENT
-}
-
-model WorkAssignment {
-  id                   String                 @id @default(uuid())
-  assignmentCode       String                 @unique
-  title                String
-  description          String?                @db.Text
-  assignmentType       String
-  assigneeId           String
-  roleId               String
-  reportingManagerId   String?
-  priority             WorkAssignmentPriority @default(MEDIUM)
-  status               WorkAssignmentStatus   @default(SCHEDULED)
-  startDate            DateTime
-  dueDate              DateTime?
-  visibleToAssignee    Boolean                @default(true)
-  reviewRequired       Boolean                @default(false)
-  autoNotifyAssignee   Boolean                @default(true)
-  escalateIfOverdue    Boolean                @default(false)
-  slaValue             Int?
-  slaUnit              String?
-  instructions         String?                @db.Text
-  internalNotes        String?                @db.Text
-  createdBy            String?
-  createdAt            DateTime               @default(now())
-  updatedAt            DateTime               @updatedAt
-  submittedForReviewAt DateTime?
-  completedAt          DateTime?
-  cancelledAt          DateTime?
-
-  assignee         AdminUser  @relation("AssignedWork", fields: [assigneeId], references: [id])
-  role             Role       @relation(fields: [roleId], references: [id])
-  reportingManager AdminUser? @relation("ReportingManagerForWork", fields: [reportingManagerId], references: [id])
-
-  modules              WorkAssignmentModule[]
-  examScopes           WorkAssignmentExamScope[]
-  targetStudents       WorkAssignmentStudent[]
-  targetStudyMaterials WorkAssignmentStudyMaterial[]
-  targetMcqQuestions   WorkAssignmentMcqQuestion[]
-  targetCurrentAffairs WorkAssignmentCurrentAffair[]
-
-  @@map("work_assignments")
-}
-
-model WorkAssignmentModule {
-  assignmentId String
-  moduleCode   String
-  assignedAt   DateTime @default(now())
-
-  assignment WorkAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
-
-  @@id([assignmentId, moduleCode])
-  @@map("work_assignment_modules")
-}
-
-model WorkAssignmentExamScope {
-  assignmentId    String
-  examProgrammeId String
-  assignedAt      DateTime @default(now())
-
-  assignment    WorkAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
-  examProgramme ExamProgramme  @relation(fields: [examProgrammeId], references: [id], onDelete: Cascade)
-
-  @@id([assignmentId, examProgrammeId])
-  @@map("work_assignment_exam_scopes")
-}
-
-model WorkAssignmentStudent {
-  assignmentId String
-  studentId    String
-  assignedAt   DateTime @default(now())
-
-  assignment WorkAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
-  student    User           @relation(fields: [studentId], references: [id], onDelete: Cascade)
-
-  @@id([assignmentId, studentId])
-  @@map("work_assignment_students")
-}
-
-model WorkAssignmentStudyMaterial {
-  assignmentId    String
-  studyMaterialId String
-  assignedAt      DateTime @default(now())
-
-  assignment    WorkAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
-  studyMaterial StudyMaterial  @relation(fields: [studyMaterialId], references: [id], onDelete: Cascade)
-
-  @@id([assignmentId, studyMaterialId])
-  @@map("work_assignment_study_materials")
-}
-
-model WorkAssignmentMcqQuestion {
-  assignmentId  String
-  mcqQuestionId String
-  assignedAt    DateTime @default(now())
-
-  assignment  WorkAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
-  mcqQuestion McqQuestion    @relation(fields: [mcqQuestionId], references: [id], onDelete: Cascade)
-
-  @@id([assignmentId, mcqQuestionId])
-  @@map("work_assignment_mcq_questions")
-}
-
-model WorkAssignmentCurrentAffair {
-  assignmentId    String
-  currentAffairId String
-  assignedAt      DateTime @default(now())
-
-  assignment    WorkAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
-  currentAffair CurrentAffair  @relation(fields: [currentAffairId], references: [id], onDelete: Cascade)
-
-  @@id([assignmentId, currentAffairId])
-  @@map("work_assignment_current_affairs")
 }

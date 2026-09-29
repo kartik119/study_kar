@@ -219,7 +219,6 @@ export class StudyMaterialService {
             topic: true,
           },
         },
-        examMappings: true,
       },
     });
 
@@ -256,7 +255,6 @@ export class StudyMaterialService {
             topic: true,
           },
         },
-        examMappings: true,
       },
     });
 
@@ -285,7 +283,7 @@ export class StudyMaterialService {
       englishRevision: enRev,
       kannadaRevision: knRev,
       primaryMapping,
-      examCycleIds: targetSm.examMappings ? targetSm.examMappings.map((em) => em.examCycleId) : [],
+      examCycleIds: [],
       hasEnglishLocale: Boolean(enLocale),
       hasKannadaLocale: Boolean(knLocale),
       foundationReadiness: readinessEval.foundationReadiness,
@@ -414,16 +412,6 @@ export class StudyMaterialService {
       await this.addTaxonomyMapping(sm.id, parsed.taxonomyMapping, adminUserId);
     }
 
-    if (parsed.examCycleIds && parsed.examCycleIds.length > 0) {
-      await prisma.studyMaterialExamMapping.createMany({
-        data: parsed.examCycleIds.map(examId => ({
-          studyMaterialId: sm.id,
-          examCycleId: examId,
-          createdByAdminId: adminUserId,
-        }))
-      });
-    }
-
     await createAuditLog({
       adminUserId,
       action: 'STUDY_MATERIAL_CREATED',
@@ -450,25 +438,6 @@ export class StudyMaterialService {
     }
 
     const { academicStageIds, examCycleIds, ...dataToUpdate } = parsed;
-
-    
-
-    if (examCycleIds !== undefined) {
-      await prisma.studyMaterialExamMapping.deleteMany({
-        where: { studyMaterialId: id }
-      });
-      if (examCycleIds && examCycleIds.length > 0) {
-        await prisma.studyMaterialExamMapping.createMany({
-          data: examCycleIds.map(examId => ({
-            studyMaterialId: id,
-            examCycleId: examId,
-            createdByAdminId: adminUserId,
-          }))
-        });
-      }
-    }
-
-
 
     await createAuditLog({
       adminUserId,

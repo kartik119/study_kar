@@ -45,6 +45,7 @@ import { razorpayAdminRouter, razorpayWebhookRouter } from './routes/razorpay.ad
 import { paymentReportAdminRouter } from './routes/payment-report.admin.routes';
 import uploadAdminRoutes from './routes/upload.admin.routes';
 import teamAdminRoutes from './routes/team.admin.routes';
+import workAssignmentAdminRoutes from './routes/work-assignment.admin.routes';
 import { errorHandler } from './middleware/errorHandler';
 import { requestLogger } from './middleware/requestLogger';
 import { sendError } from './utils/response';
@@ -108,6 +109,7 @@ app.use('/api/v1/admin/reports/payments', paymentReportAdminRouter);
 app.use('/api/v1/admin/student-subscriptions', studentSubscriptionAdminRoutes);
 app.use('/api/v1/admin/upload', uploadAdminRoutes);
 app.use('/api/v1/admin/team', teamAdminRoutes);
+app.use('/api/v1/admin/team/work-assignments', workAssignmentAdminRoutes);
 app.use('/api/v1/student/study-plans', studyPlansStudentRoutes);
 app.use('/api/v1/student/ranked-tests', rankedTestStudentRoutes);
 app.use('/api/v1/student/topic-practice', topicPracticeStudentRoutes);

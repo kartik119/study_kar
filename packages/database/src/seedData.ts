@@ -71,6 +71,7 @@ export const INITIAL_PERMISSIONS = [
   { code: 'mcq.review', name: 'Review MCQ Questions', description: 'Review submitted MCQ questions and request changes' },
   { code: 'mcq.approve', name: 'Approve MCQ Questions', description: 'Approve reviewed MCQ questions for test eligibility' },
   { code: 'mcq.archive', name: 'Archive MCQ Questions', description: 'Archive obsolete or deprecated MCQ questions' },
+  { code: 'team.activity_logs.view', name: 'View Team Activity Logs', description: 'View administrative team activity logs' },
 ];
 
 export const ROLE_PERMISSION_MAPPINGS: Record<string, string[]> = {
